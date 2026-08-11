@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>CONTAGION ルールブック ― トランプとダイスで遊ぶ、1人用パンデミックゲーム</title>
+<meta name="description" content="トランプ1組とダイス3個だけで遊べる、1人用パンデミック型ボードゲーム『CONTAGION』の公式ルールブック。">
+
+<!-- OGP -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="CONTAGION ― トランプとダイスで遊ぶ、1人用パンデミックゲーム">
+<meta property="og:description" content="世界に広がる病原体を、限られた時間と資源で食い止めろ。トランプ1組とダイス3個だけで遊べるソロプレイ・パンデミックゲームのルールブック。">
+<meta property="og:image" content="https://ogel-prog.github.io/contagion/images/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0A0E17">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<link rel="icon" href="https://ogel-prog.github.io/contagion/images/favicon.ico">
+<link rel="apple-touch-icon" href="https://ogel-prog.github.io/contagion/images/apple-touch-icon.png">
+<link rel="manifest" href="https://ogel-prog.github.io/contagion/images/manifest.webmanifest">
+
+<style>
+/* ============================================================
+   TOKENS
+============================================================ */
+:root{
+  color-scheme: dark;
+
+  --bg:#0A0E17;
+  --bg-deep:#060810;
+  --panel:#121a2b;
+  --panel-line:#ffffff0f;
+  --ink:#E8EEF5;
+  --ink-soft:#9FB0C7;
+  --ink-faint:#5C6C87;
+  --line:#232E47;
+
+  --spade:#4FD6FF;
+  --spade-soft:#4FD6FF20;
+  --spade-tint:#101E2C;
+  --heart:#FF3B54;
+  --heart-soft:#FF3B5420;
+  --heart-tint:#26121a;
+  --diamond:#FFB13B;
+  --diamond-soft:#FFB13B20;
+  --diamond-tint:#241a0c;
+  --club:#39FFB0;
+  --club-soft:#39FFB020;
+  --club-tint:#0b2420;
+
+  --danger:#FF2B44;
+  --danger-ink:#FFD9DE;
+  --danger-bg:#1E0B10;
+
+  --font-display:'Press Start 2P', monospace;
+  --font-pixel:'DotGothic16', sans-serif;
+  --font-body:'Noto Sans JP', sans-serif;
+  --font-mono:'JetBrains Mono', monospace;
+
+  --radius-s:4px;
+  --radius-m:8px;
+  --shadow-panel: 0 1px 0 #ffffff08 inset, 0 10px 26px -16px #000000aa;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.85;
+  -webkit-font-smoothing:antialiased;
+  position:relative;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:2000; pointer-events:none;
+  background:repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 3px);
+  mix-blend-mode:overlay;
+}
+body::after{
+  content:"";
+  position:fixed; inset:0; z-index:1999; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 0%, transparent 45%, #00000066 100%);
+}
+
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto;}
+  *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+}
+
+h1,h2,h3,h4{font-family:var(--font-pixel); font-weight:700; margin:0; color:var(--ink);}
+p{margin:0 0 1em; color:var(--ink-soft);}
+a{color:inherit;}
+
+.wrap{max-width:960px; margin:0 auto; padding:0 24px;}
+
+::selection{background:var(--danger); color:#fff;}
+
+:focus-visible{outline:2px solid var(--spade); outline-offset:2px; border-radius:2px;}
+
+/* ============================================================
+   HUD CORNER-BRACKET FRAME (signature motif)
+============================================================ */
+.frame{position:relative;}
+.frame::before, .frame::after{
+  content:""; position:absolute; width:12px; height:12px; pointer-events:none; z-index:2;
+}
+.frame::before{top:-1px; left:-1px; border-top:2px solid var(--spade); border-left:2px solid var(--spade);}
+.frame::after{bottom:-1px; right:-1px; border-bottom:2px solid var(--spade); border-right:2px solid var(--spade);}
+
+/* ============================================================
+   CARD SPRITE  (13 cols: A..K / 4 rows: ♠ ♥ ♦ ♣)
+============================================================ */
+.card{
+  --card-w: 56px;
+  width:var(--card-w);
+  aspect-ratio:359/539;
+  display:inline-block;
+  border-radius:7%;
+  background-image:url('./images/card.svg');
+  background-size:1300% 400%;
+  background-position: calc(var(--c,0) / 12 * 100%) calc(var(--r,0) / 3 * 100%);
+  background-repeat:no-repeat;
+  background-color:#fff;
+  box-shadow: 0 0 0 1px #000000aa, 0 0 14px -4px var(--spade);
+  vertical-align:middle;
+  flex-shrink:0;
+}
+.card-back{
+  --card-w: 56px;
+  width:var(--card-w);
+  aspect-ratio:680/1001;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:5%;
+  background:
+    repeating-linear-gradient(135deg, #ffffff10 0 6px, transparent 6px 12px),
+    linear-gradient(160deg, #1a2436, #0c121f);
+  box-shadow: 0 0 0 1px var(--spade-soft), 0 0 10px -4px var(--spade);
+  color:var(--spade);
+  font-family:var(--font-mono);
+  font-weight:700;
+  vertical-align:middle;
+  flex-shrink:0;
+}
+.card-back::after{content:"✓"; font-size:calc(var(--card-w,56px) * 0.4); opacity:.9; text-shadow:0 0 6px var(--spade);}
+
+/* ============================================================
+   TOP NAV
+============================================================ */
+.topnav{
+  position:sticky; top:0; z-index:1500;
+  background:#0A0E17dd;
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.topnav-inner{
+  max-width:960px; margin:0 auto; padding:12px 24px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+}
+.brand{
+  font-family:var(--font-display);
+  font-size:15px;
+  letter-spacing:.02em;
+  display:flex; align-items:center; gap:9px;
+  color:var(--ink);
+  text-shadow:0 0 10px #FF2B4455;
+}
+.brand .dot{width:8px;height:8px;border-radius:50%;background:var(--danger); box-shadow:0 0 8px 2px var(--danger);}
+.navtoggle{
+  display:none;
+  background:var(--panel); border:1px solid var(--line); border-radius:6px;
+  width:38px; height:38px; cursor:pointer;
+  font-family:var(--font-mono); font-size:16px; color:var(--spade);
+}
+.navlinks{display:flex; gap:2px; flex-wrap:wrap; justify-content:flex-end;}
+.navlinks a{
+  font-size:12px; font-family:var(--font-mono); letter-spacing:.02em;
+  color:var(--ink-soft); text-decoration:none;
+  padding:7px 9px; border-radius:4px;
+}
+.navlinks a:hover{background:var(--spade-soft); color:var(--spade);}
+
+@media (max-width:760px){
+  .navtoggle{display:block;}
+  .navlinks{
+    display:none; flex-direction:column; width:100%;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:6px; margin-top:10px; position:absolute; left:16px; right:16px; top:56px;
+    box-shadow:var(--shadow-panel);
+  }
+  .navlinks.open{display:flex;}
+  .navlinks a{padding:10px 12px;}
+}
+
+/* ============================================================
+   HERO
+============================================================ */
+.hero{
+  position:relative;
+  padding:44px 0 40px;
+  overflow:hidden;
+}
+.bulletin{
+  font-family:var(--font-mono); font-size:12px; letter-spacing:.09em;
+  color:var(--ink-faint); text-transform:uppercase;
+  display:flex; gap:10px; align-items:center; margin-bottom:16px;
+}
+.bulletin::before{content:"●"; color:var(--danger); font-size:9px; text-shadow:0 0 6px var(--danger);}
+.hero h1{
+  font-family:var(--font-display);
+  font-size:clamp(22px, 4.4vw, 34px);
+  line-height:1.3;
+  letter-spacing:.02em;
+  color:var(--ink);
+  text-shadow:0 0 18px #FF2B4470, 0 0 2px #FF2B44;
+}
+.hero-tagline{
+  font-family:var(--font-pixel); font-weight:700;
+  font-size:clamp(18px,3vw,24px);
+  color:var(--danger);
+  margin-top:12px;
+  letter-spacing:.04em;
+  text-shadow:0 0 12px #FF2B4460;
+}
+.hero-lede{ /* max-width:34em; */ margin-top:14px; font-size:15px;}
+
+.hero-visual-frame{
+  margin-top:28px;
+  overflow:hidden;
+  box-shadow:0 0 0 1px var(--line), 0 20px 50px -24px #000c, 0 0 40px -18px var(--spade);
+  position:relative;
+}
+.hero-visual-frame img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+
+.meta-chips{display:flex; flex-wrap:wrap; gap:9px; margin-top:22px;}
+.chip{
+  font-family:var(--font-mono); font-size:12px;
+  border:1px solid var(--line); background:var(--panel);
+  padding:7px 12px; border-radius:4px; color:var(--ink-soft);
+  display:flex; align-items:center; gap:6px;
+}
+.chip b{color:var(--spade); font-weight:700;}
+
+/* ============================================================
+   SECTIONS / GENERIC
+============================================================ */
+section{padding:60px 0;}
+section + section{border-top:1px solid var(--line);}
+.eyebrow{
+  font-family:var(--font-mono); font-size:11.5px; letter-spacing:.12em;
+  color:var(--spade); text-transform:uppercase;
+  display:flex; align-items:center; gap:10px; margin-bottom:12px;
+  text-shadow:0 0 8px #4FD6FF40;
+}
+.eyebrow::after{content:""; height:1px; flex:1; background:var(--line);}
+h2.sectitle{font-size:clamp(22px,4vw,30px); margin-bottom:20px;}
+h2.sectitle em{font-style:normal; color:var(--danger); text-shadow:0 0 14px #FF2B4460;}
+.lede{ /* max-width:38em; */ font-size:15px;}
+
+.zone-tag{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--font-mono); font-size:11px; font-weight:700;
+  padding:4px 9px; border-radius:4px; letter-spacing:.03em;
+  border:1px solid currentColor;
+}
+.zone-tag.spade{background:var(--spade-soft); color:var(--spade);}
+.zone-tag.heart{background:var(--heart-soft); color:var(--heart);}
+.zone-tag.diamond{background:var(--diamond-soft); color:var(--diamond);}
+.zone-tag.club{background:var(--club-soft); color:var(--club);}
+.zone-tag .pip{font-size:13px;}
+
+/* panel / card box */
+.panel{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:22px 24px; box-shadow:var(--shadow-panel);
+}
+
+/* ============================================================
+   STORY
+============================================================ */
+.story p{
+  font-family:var(--font-pixel); font-size:16.5px; color:var(--ink);
+  max-width:34em; margin:0 0 1.2em; line-height:2;
+}
+.story strong{color:var(--danger); font-weight:700; text-shadow:0 0 10px #FF2B4450;}
+
+/* ============================================================
+   TOOLS
+============================================================ */
+.tools-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px;}
+@media (max-width:600px){.tools-grid{grid-template-columns:1fr;}}
+.tool-card{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:20px; display:flex; gap:16px; align-items:center; box-shadow:var(--shadow-panel);
+}
+.tool-icon{
+  width:52px; height:52px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg-deep); border:1px solid var(--line); font-size:24px;
+}
+.tool-card h3{font-size:16px; margin-bottom:4px; font-family:var(--font-pixel); font-weight:700;}
+.tool-card p{font-size:13.5px; margin:0;}
+
+/* ============================================================
+   SUIT / RANK TABLE
+============================================================ */
+.suit-legend{display:flex; flex-wrap:wrap; gap:14px; margin:24px 0;}
+.suit-legend-item{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:14px 16px; display:flex; align-items:center; gap:12px; flex:1 1 200px;
+  box-shadow:var(--shadow-panel);
+}
+.suit-legend-item .info b{display:block; font-size:14.5px; margin-bottom:2px; font-family:var(--font-pixel);}
+.suit-legend-item .info span{font-family:var(--font-mono); font-size:12px; color:var(--ink-faint);}
+
+.rank-strip{
+  display:flex; gap:6px; overflow-x:auto; padding:18px 4px 10px;
+  scrollbar-width:thin;
+}
+.rank-strip .rk{display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0;}
+.rank-strip .rk span{font-family:var(--font-mono); font-size:11px; color:var(--ink-faint);}
+.rank-strip .rk b{font-family:var(--font-mono); font-size:12px; color:var(--spade);}
+
+/* ============================================================
+   BOARD DIAGRAM
+============================================================ */
+.board{
+  display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr);
+  gap:3px; max-width:340px; margin:26px auto; aspect-ratio:1;
+  background:var(--bg-deep); padding:3px; border-radius:var(--radius-m);
+  box-shadow:var(--shadow-panel);
+}
+.board .cell{
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:700; border-radius:3px;
+  border:1px solid currentColor;
+}
+.board .cell.sp{background:var(--spade-tint); color:var(--spade); text-shadow:0 0 10px var(--spade);}
+.board .cell.he{background:var(--heart-tint); color:var(--heart); text-shadow:0 0 10px var(--heart);}
+.board .cell.di{background:var(--diamond-tint); color:var(--diamond); text-shadow:0 0 10px var(--diamond);}
+.board .cell.cl{background:var(--club-tint); color:var(--club); text-shadow:0 0 10px var(--club);}
+
+.board-example{display:flex; align-items:center; gap:22px; justify-content:center; flex-wrap:wrap; margin-top:26px;}
+.mini-area{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:6px;
+  background:var(--spade-tint); padding:10px; border-radius:8px;
+  border:1px solid var(--line);
+}
+
+/* ============================================================
+   NUMBERED STEPS
+============================================================ */
+.steps{counter-reset:step; margin-top:26px; display:flex; flex-direction:column; gap:0;}
+.step{
+  position:relative;
+  padding:22px 0 22px 62px;
+  border-top:1px solid var(--line);
+}
+.step:first-child{border-top:1px solid var(--line);}
+.step::before{
+  counter-increment:step; content:counter(step);
+  font-family:var(--font-mono); font-weight:700; font-size:15px;
+  color:var(--danger);
+  width:36px; height:36px; border-radius:50%;
+  border:1.5px solid var(--danger);
+  box-shadow:0 0 10px -3px var(--danger);
+  display:flex; align-items:center; justify-content:center;
+  position:absolute; left:0; top:22px;
+}
+.step h4{font-size:16px; margin-bottom:8px; font-family:var(--font-pixel);}
+.step p{font-size:14.5px; margin-bottom:10px;}
+.step .visual{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;}
+
+.pos-grid{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:4px; max-width:220px;
+  font-family:var(--font-mono); font-size:12px; margin:14px 0;
+}
+.pos-grid div{
+  background:var(--bg-deep); border:1px solid var(--line); border-radius:3px;
+  aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+  color:var(--ink-soft);
+}
+
+/* ============================================================
+   TURN LOOP
+============================================================ */
+.loop{
+  display:flex; align-items:center; justify-content:center; gap:0;
+  margin:30px 0 10px; flex-wrap:wrap;
+}
+.loop .lp{
+  font-family:var(--font-mono); font-weight:700; font-size:13px;
+  padding:14px 20px; border-radius:999px; border:1.5px solid var(--spade);
+  background:var(--panel); color:var(--spade);
+  box-shadow:0 0 14px -6px var(--spade);
+}
+.loop .arrow{font-size:20px; color:var(--ink-faint); padding:0 12px;}
+.loop-note{text-align:center; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); margin-bottom:0;}
+
+/* ============================================================
+   PHASE BLOCK
+============================================================ */
+.phase{margin-top:46px;}
+.phase-head{display:flex; align-items:center; gap:12px; margin-bottom:16px;}
+.phase-head .idx{font-family:var(--font-mono); font-size:12px; color:var(--ink-faint);}
+.phase h3{font-size:19px; font-family:var(--font-pixel);}
+
+.example{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:20px; margin-top:16px; box-shadow:var(--shadow-panel);
+}
+.example .ex-label{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.06em; color:var(--ink-faint);
+  text-transform:uppercase; margin-bottom:14px; display:block;
+}
+.card-grid2{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; width:fit-content;}
+.example-row{display:flex; align-items:center; gap:18px; flex-wrap:wrap;}
+.example-arrow{font-size:22px; color:var(--danger); flex-shrink:0; text-shadow:0 0 10px #FF2B4460;}
+
+/* dice */
+.die{
+  --s:44px;
+  width:var(--s); height:var(--s); border-radius:8px;
+  background:#EDEFF3; border:2px solid var(--spade);
+  display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
+  padding:6px; gap:2px; box-shadow:0 0 12px -3px var(--spade);
+  flex-shrink:0;
+}
+.die i{border-radius:50%;}
+.die i.on{background:#1A2436;}
+.dice-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+.dice-sum{
+  font-family:var(--font-mono); font-weight:700; font-size:14px;
+  color:var(--ink-soft); margin-left:4px;
+}
+
+.move-grid{
+  display:grid; grid-template-columns:repeat(4,1fr); grid-template-rows:repeat(4,1fr);
+  gap:4px; max-width:260px; margin:18px auto;
+}
+.move-grid div{
+  aspect-ratio:1; border-radius:4px; background:var(--bg-deep); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:11px; color:var(--ink-faint);
+}
+.move-grid div.reach{background:var(--club-tint); color:var(--club); font-weight:700; border-color:var(--club); text-shadow:0 0 8px var(--club);}
+.move-grid div.here{background:var(--danger); color:#fff; font-weight:700; box-shadow:0 0 12px -2px var(--danger);}
+
+table.rules-table{width:100%; border-collapse:collapse; margin-top:16px; font-size:14px;}
+table.rules-table th, table.rules-table td{
+  border:1px solid var(--line); padding:10px 14px; text-align:left;
+}
+table.rules-table th{
+  background:var(--bg-deep); font-family:var(--font-mono); font-size:12px;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--spade);
+}
+table.rules-table td{background:var(--panel); color:var(--ink-soft);}
+table.rules-table td.num, table.rules-table th.num{font-family:var(--font-mono); text-align:center;}
+
+/* ============================================================
+   DANGER / OUTBREAK
+============================================================ */
+.hazard{
+  border-radius:var(--radius-m); overflow:hidden; box-shadow:var(--shadow-panel);
+  border:1px solid var(--danger);
+}
+.hazard-tape{
+  height:14px;
+  background:repeating-linear-gradient(45deg, var(--danger) 0 14px, #1a0207 14px 28px);
+}
+.hazard-body{background:var(--danger-bg); padding:24px;}
+.hazard-body h3{color:var(--danger-ink); font-size:18px; margin-bottom:10px; font-family:var(--font-pixel); text-shadow:0 0 12px #FF2B4460;}
+.hazard-body p{color:#d99aa4;}
+.hazard-formula{
+  font-family:var(--font-mono); font-size:15px; background:#0d0308; border:1px dashed var(--danger);
+  padding:12px 16px; border-radius:6px; margin:14px 0; color:var(--danger-ink); font-weight:700;
+  display:inline-block;
+}
+
+/* ============================================================
+   WIN / LOSE TABLE
+============================================================ */
+.diff-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:20px;}
+@media (max-width:640px){.diff-grid{grid-template-columns:1fr;}}
+.diff-card{
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius-m);
+  padding:22px; text-align:center; box-shadow:var(--shadow-panel);
+}
+.diff-card .label{font-family:var(--font-mono); font-size:12px; letter-spacing:.1em; color:var(--ink-faint);}
+.diff-card .num{font-family:var(--font-display); font-size:40px; line-height:1; margin:14px 0; color:var(--ink);}
+.diff-card .cap{font-size:13px; color:var(--ink-soft);}
+.diff-card.easy .num{color:var(--club); text-shadow:0 0 16px var(--club);}
+.diff-card.normal .num{color:var(--diamond); text-shadow:0 0 16px var(--diamond);}
+.diff-card.hard .num{color:var(--heart); text-shadow:0 0 16px var(--heart);}
+
+/* ============================================================
+   DICE ROLLER (interactive)
+============================================================ */
+.roller{
+  margin-top:22px; padding:26px; border-radius:var(--radius-m);
+  background:var(--bg-deep); color:var(--ink); text-align:center;
+  box-shadow:var(--shadow-panel); border:1px solid var(--line);
+}
+.roller .dice-row{justify-content:center; margin-bottom:18px;}
+.roll-btn{
+  font-family:var(--font-mono); font-weight:700; font-size:13px; letter-spacing:.04em;
+  background:var(--danger); color:#fff; border:none; padding:12px 26px;
+  border-radius:999px; cursor:pointer; transition:transform .12s ease;
+  box-shadow:0 0 20px -6px var(--danger);
+}
+.roll-btn:hover{transform:translateY(-1px);}
+.roll-btn:active{transform:translateY(1px);}
+.roller-caption{font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); margin-top:14px;}
+
+.die.rolling{animation:shake .5s ease;}
+@keyframes shake{
+  0%,100%{transform:rotate(0);}
+  20%{transform:rotate(-8deg);}
+  40%{transform:rotate(7deg);}
+  60%{transform:rotate(-5deg);}
+  80%{transform:rotate(4deg);}
+}
+
+/* ============================================================
+   FOOTER
+============================================================ */
+footer{padding:46px 0 70px; text-align:center;}
+footer p{font-size:12px; color:var(--ink-faint); font-family:var(--font-mono);}
+footer .brand{justify-content:center; margin-bottom:14px;}
+
+.backtotop{
+  display:inline-block; margin-top:18px; font-family:var(--font-mono); font-size:12px;
+  color:var(--spade); text-decoration:none; border-bottom:1px solid var(--line); padding-bottom:2px;
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <div class="brand"><span class="dot"></span>CONTAGION</div>
+    <button class="navtoggle" id="navToggle" aria-label="メニュー" aria-expanded="false">≡</button>
+    <div class="navlinks" id="navLinks">
+      <a href="#story">概要</a>
+      <a href="#tools">準備</a>
+      <a href="#cards">トランプ</a>
+      <a href="#board">ボード</a>
+      <a href="#setup">セットアップ</a>
+      <a href="#flow">ゲームの流れ</a>
+      <a href="#outbreak">アウトブレイク</a>
+      <a href="#win">勝敗条件</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================================================
+     HERO
+============================================================ -->
+<header class="hero">
+  <div class="wrap">
+    <div class="bulletin">SOLO PANDEMIC SIMULATION ／ RULEBOOK v1.0</div>
+    <h1>CONTAGION</h1>
+    <p class="hero-tagline">怒涛の感染速度</p>
+    <p class="hero-lede">トランプ1組とダイス3個だけで遊べる、1人用のパンデミック型ボードゲーム。医療班となって4種類の病原体が蔓延する都市を巡回し、感染が広がりきる前にすべてを制圧せよ。</p>
+
+    <div class="hero-visual-frame frame">
+      <img src="./images/eyecatch.png" alt="CONTAGION">
+    </div>
+
+    <div class="meta-chips">
+      <div class="chip">👤 <b>1人プレイ</b></div>
+      <div class="chip">🃏 <b>トランプ1組</b></div>
+      <div class="chip">🎲 <b>6面ダイス3個</b></div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     STORY
+============================================================ -->
+<section id="story">
+  <div class="wrap">
+    <div class="eyebrow">Situation Report</div>
+    <h2 class="sectitle">ストーリー</h2>
+    <div class="story">
+      <p>未知の病原体が世界各地で同時に確認された。幸い、病原体そのものは治療可能だった。しかし問題は、その<strong>感染速度</strong>だった。</p>
+      <p>感染した都市では病原体が変異し、時間が経つほど治療が困難になる。さらに、ひとつの病原体を完全に制圧したと思っても、再び感染が発生する可能性がある。</p>
+      <p>あなたは医療班として、4種類の病原体が広がる都市へ派遣された。手元にあるのは、限られた研究資源と、現場で使える医療機器だけ。研究によって病原体を弱体化させることはできる。しかし、研究資源は無限ではない。そして、感染は待ってくれない。</p>
+      <p><strong>すべての病原体を制圧できるか。</strong>それとも、都市が感染に飲み込まれるのが先か。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     TOOLS
+============================================================ -->
+<section id="tools">
+  <div class="wrap">
+    <div class="eyebrow">Equipment</div>
+    <h2 class="sectitle">準備するもの</h2>
+    <p class="lede">必要な道具はこれだけ。特別なコンポーネントは一切不要です。</p>
+    <div class="tools-grid">
+      <div class="tool-card frame">
+        <div class="tool-icon">🃏</div>
+        <div>
+          <h3>トランプ 1組 (52枚)</h3>
+          <p>ジョーカーはなくてもプレイできます。</p>
+        </div>
+      </div>
+      <div class="tool-card frame">
+        <div class="tool-icon">🎲</div>
+        <div>
+          <h3>6面ダイス 3個</h3>
+          <p>感染チェック・初期配置・移動と治療に使用します。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     CARDS
+============================================================ -->
+<section id="cards">
+  <div class="wrap">
+    <div class="eyebrow">Card Reference</div>
+    <h2 class="sectitle">トランプの役割</h2>
+    <p class="lede">トランプの<strong style="color:var(--ink)">スート</strong>は4種類の病原体エリアを、<strong style="color:var(--ink)">ランク</strong>はその病原体の感染力を表します。</p>
+
+    <div class="suit-legend">
+      <div class="suit-legend-item frame">
+        <span class="card" style="--r:0;--c:12;--card-w:52px"></span>
+        <div class="info"><b>♠ スペード</b><span>病原体エリア — 左上</span></div>
+      </div>
+      <div class="suit-legend-item frame">
+        <span class="card" style="--r:2;--c:12;--card-w:52px"></span>
+        <div class="info"><b>♦ ダイヤ</b><span>病原体エリア — 右上</span></div>
+      </div>
+      <div class="suit-legend-item frame">
+        <span class="card" style="--r:1;--c:12;--card-w:52px"></span>
+        <div class="info"><b>♥ ハート</b><span>病原体エリア — 左下</span></div>
+      </div>
+      <div class="suit-legend-item frame">
+        <span class="card" style="--r:3;--c:12;--card-w:52px"></span>
+        <div class="info"><b>♣ クラブ</b><span>病原体エリア — 右下</span></div>
+      </div>
+    </div>
+
+    <p class="lede" style="margin-top:32px;">ランクは感染力を表す数値です。A は 1、2〜10 はそのまま、J・Q・K はすべて 10 として扱います。感染力は 1〜10 の10段階になります。</p>
+
+    <div class="rank-strip" id="rankStrip"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     BOARD
+============================================================ -->
+<section id="board">
+  <div class="wrap">
+    <div class="eyebrow">Game Board</div>
+    <h2 class="sectitle">ゲームボード</h2>
+    <p class="lede">4つの病原体エリアを、それぞれ2×2のマップとして配置します。全体では4×4の16マスになります。各エリアには、同じスートのカード4枚が表向きに配置され、その表面が現在の感染状態を表します。</p>
+
+    <div class="board frame" aria-hidden="true">
+      <div class="cell sp">♠</div><div class="cell sp">♠</div><div class="cell di">♦</div><div class="cell di">♦</div>
+      <div class="cell sp">♠</div><div class="cell sp">♠</div><div class="cell di">♦</div><div class="cell di">♦</div>
+      <div class="cell he">♥</div><div class="cell he">♥</div><div class="cell cl">♣</div><div class="cell cl">♣</div>
+      <div class="cell he">♥</div><div class="cell he">♥</div><div class="cell cl">♣</div><div class="cell cl">♣</div>
+    </div>
+
+    <div class="board-example">
+      <div>
+        <span class="zone-tag spade"><span class="pip">♠</span>スペードエリアの例</span>
+        <div class="mini-area" style="margin-top:12px;">
+          <span class="card" style="--r:0;--c:10"></span>
+          <span class="card" style="--r:0;--c:5"></span>
+          <span class="card" style="--r:0;--c:3"></span>
+          <span class="card" style="--r:0;--c:8"></span>
+        </div>
+      </div>
+      <p style="max-width:22em; font-size:14px;">この4枚が、その時点での♠病原体の感染状態です。数値の合計が高いほど、そのエリアは危険な状態にあります。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SETUP
+============================================================ -->
+<section id="setup">
+  <div class="wrap">
+    <div class="eyebrow">Setup — 全6ステップ</div>
+    <h2 class="sectitle">セットアップ</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div>
+          <h4>スートごとに分ける</h4>
+          <p>52枚のトランプを ♠13枚・♦13枚・♥13枚・♣13枚 の4つの山に分けます。ジョーカーがある場合は除外します。それぞれの山をシャッフルします。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <h4>各エリアに4枚ずつ配置する</h4>
+          <p>各スートの山札から4枚を引き、そのスートの2×2エリアに表向きで配置します。ここに配置されたカードが感染カードとなります。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <h4>初期アウトブレイクの確認</h4>
+          <p>各エリアの4枚のランクを合計します (A = 1、J / Q / K = 10)。合計が <b style="color:var(--danger)">28を超える</b> エリアがある場合、そのエリアは再シャッフルして4枚を配置し直します。ゲーム開始時点でアウトブレイク状態にならないようにするためです。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <h4>残りのカードを山札にする</h4>
+          <p>4エリアに配置されなかった36枚をまとめてシャッフルし、山札にします。ゲーム中、感染カード・研究カードはこの山札から引きます。捨てられたカードは捨て札になります。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <h4>研究カードを引く</h4>
+          <p>医療班はゲーム開始前に、山札から3枚を引きます。これが研究カードとなり、プレイヤーの手元に表向きで置いておきます。</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div>
+          <h4>医療班の初期位置を決める</h4>
+          <p>ダイスを3個振り、合計値を求めます。16マスに以下の順で番号を振り、ダイスの合計値のマスに医療班を配置します。17なら1、18なら2に戻ります。</p>
+          <div class="pos-grid" aria-hidden="true">
+            <div>1</div><div>2</div><div>3</div><div>4</div>
+            <div>5</div><div>6</div><div>7</div><div>8</div>
+            <div>9</div><div>10</div><div>11</div><div>12</div>
+            <div>13</div><div>14</div><div>15</div><div>16</div>
+          </div>
+          <p style="font-size:13px;">医療班の位置を記憶するため、ジョーカーを重ねて置いておきます。ジョーカーがない場合は、目印になるミームをそのマスの感染カードの上に重ねて置いておきます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FLOW
+============================================================ -->
+<section id="flow">
+  <div class="wrap">
+    <div class="eyebrow">Turn Structure</div>
+    <h2 class="sectitle">ゲームの流れ</h2>
+    <p class="lede">ゲームは <b>感染フェーズ → 医療班フェーズ</b> の順番で進み、これを繰り返します。</p>
+
+    <div class="loop" aria-hidden="true">
+      <div class="lp">感染フェーズ</div>
+      <div class="arrow">→</div>
+      <div class="lp">医療班フェーズ</div>
+      <div class="arrow">↻</div>
+    </div>
+    <p class="loop-note">REPEAT UNTIL WIN OR OUTBREAK</p>
+
+    <!-- 感染フェーズ -->
+    <div class="phase" id="infect-phase">
+      <div class="phase-head">
+        <span class="idx">PHASE A</span>
+        <h3>感染フェーズ</h3>
+      </div>
+      <p>山札からカードを1枚引きます。引いたカードのスートと同じエリアが感染します。</p>
+
+      <p style="margin-top:20px;"><b>未治療のカードがある場合</b> ― 引いたカードと同じスートエリアを確認し、引いたカードよりランクが低いカードの中で最も低いものと交換します。交換対象になった感染カードは捨て札になります。</p>
+
+      <div class="example frame">
+        <span class="ex-label">Example — ♥7 を引いた場合</span>
+        <div class="example-row">
+          <div class="card-grid2">
+            <span class="card" style="--r:1;--c:2"></span>
+            <span class="card" style="--r:1;--c:7"></span>
+            <span class="card" style="--r:1;--c:4"></span>
+            <span class="card" style="--r:1;--c:9"></span>
+          </div>
+          <span class="example-arrow">→</span>
+          <div class="card-grid2">
+            <span class="card" style="--r:1;--c:6"></span>
+            <span class="card" style="--r:1;--c:7"></span>
+            <span class="card" style="--r:1;--c:4"></span>
+            <span class="card" style="--r:1;--c:9"></span>
+          </div>
+        </div>
+        <p style="margin:12px 0 0; font-size:13.5px;">最もランクが低い ♥3 が交換対象になり、捨て札へ。エリアには ♥7 が新たに加わります。</p>
+      </div>
+
+      <p style="margin-top:20px;"><b>引いたカードが最も低い場合</b> ― エリア内に、引いたカードよりランクが低いカードが存在しない場合、その感染カードはそのまま捨て札になります。</p>
+
+      <p style="margin-top:20px;"><b>完治したエリアへの感染</b> ― エリア内の4枚すべてが治療済みの場合、そのエリアは完治状態です。完治状態のカードは裏返しておきます。この状態で同じスートの感染カードを引いた場合、通常の交換はできません。代わりにダイスを1個振ります。</p>
+
+      <table class="rules-table" style="max-width:420px;">
+        <thead><tr><th class="num">出目</th><th>再感染する場所</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>左上</td></tr>
+          <tr><td class="num">2</td><td>右上</td></tr>
+          <tr><td class="num">3</td><td>左下</td></tr>
+          <tr><td class="num">4</td><td>右下</td></tr>
+          <tr><td class="num">5 / 6</td><td>何も起こらない</td></tr>
+        </tbody>
+      </table>
+
+      <div class="example frame">
+        <span class="ex-label">Example — ♥エリア完治中に ♥ を引き、ダイスで「3」</span>
+        <div class="example-row">
+          <div class="card-grid2">
+            <span class="card-back" style="--card-w:56px"></span>
+            <span class="card-back" style="--card-w:56px"></span>
+            <span class="card-back" style="--card-w:56px"></span>
+            <span class="card-back" style="--card-w:56px"></span>
+          </div>
+          <span class="example-arrow">→</span>
+          <div class="card-grid2">
+            <span class="card-back" style="--card-w:56px"></span>
+            <span class="card-back" style="--card-w:56px"></span>
+            <span class="card" style="--r:1;--c:4"></span>
+            <span class="card-back" style="--card-w:56px"></span>
+          </div>
+        </div>
+        <p style="margin:12px 0 0; font-size:13.5px;">左下のカードが表向きに戻り、♥5 として再感染します。</p>
+      </div>
+
+      <p style="margin-top:20px;"><b>アウトブレイクのチェック</b> ― 再感染することでアウトブレイク状態になる可能性があります。アウトブレイクの確認は医療班フェーズ後になるので、ただちにゲームオーバーにはなりません。</p>
+    </div>
+
+    <!-- 研究 -->
+    <div class="phase" id="research-phase">
+      <div class="phase-head">
+        <span class="idx">PHASE B</span>
+        <h3>医療班フェーズ｜研究</h3>
+      </div>
+      <p>感染フェーズが終了すると、医療班フェーズになります。まず山札から研究カードを補充し (このタイミングで研究カードは必ず4枚になります)、その後、研究を行うことができます。研究は行わなくてもかまいません。</p>
+      <p>研究カードから1枚を選び、選んだカードを同じスートのエリアにある任意のカード1枚と交換できます。交換した感染カードは手札の研究カードに回収します。研究によって、感染カードのランクを下げることも、上げることもできます。</p>
+
+      <div class="example frame">
+        <span class="ex-label">Example — 研究カード ♥4 を使用</span>
+        <div class="example-row">
+          <div class="card-grid2">
+            <span class="card" style="--r:1;--c:8"></span>
+            <span class="card" style="--r:1;--c:5"></span>
+            <span class="card" style="--r:1;--c:10"></span>
+            <span class="card" style="--r:1;--c:7"></span>
+          </div>
+          <span class="example-arrow">→</span>
+          <div class="card-grid2">
+            <span class="card" style="--r:1;--c:3"></span>
+            <span class="card" style="--r:1;--c:5"></span>
+            <span class="card" style="--r:1;--c:10"></span>
+            <span class="card" style="--r:1;--c:7"></span>
+          </div>
+        </div>
+        <p style="margin:12px 0 0; font-size:13.5px;">♥9 が ♥4 に置き換わり、エリアの感染力が低下。♥9 は手札に回収されます。</p>
+      </div>
+    </div>
+
+    <!-- 治療 -->
+    <div class="phase" id="move-phase">
+      <div class="phase-head">
+        <span class="idx">PHASE C</span>
+        <h3>医療班フェーズ｜治療</h3>
+      </div>
+      <p>3個のダイスを振ります。出た目は「移動」または「治療」に自由に割り振れます。3個すべてを移動に使っても、すべて治療に使っても、一部だけでもかまいません。</p>
+
+      <p style="margin-top:20px;"><b>移動</b> ― ダイス1個を移動に使用すると、その出目以下のマス数を移動できます。上下左右にのみ移動でき、斜め移動はできません。</p>
+
+      <div class="example frame">
+        <span class="ex-label">出目が 2 の場合の移動可能マス</span>
+        <div class="move-grid" aria-hidden="true" id="moveGrid"></div>
+      </div>
+
+      <p style="margin-top:20px;"><b>治療</b> ― 治療は医療班が現在いるマスに対して行います。治療に使用するダイスの合計値が、そのマスの感染カードのランク以上であれば、そのカードを治療できます。治療されたカードは裏返します。</p>
+
+      <div class="example frame">
+        <span class="ex-label">Example — 現在地の感染カードが ♥7、ダイスは 4・3・2</span>
+        <div class="dice-row" id="exampleDice1"></div>
+        <p style="margin:12px 0 0; font-size:13.5px;">4 と 3 を治療に使うと合計7となり、♥7 を治療できます。治療できた感染カードは裏返します。</p>
+      </div>
+
+      <p style="margin-top:20px;"><b>ダイスの割り振り</b> ― ダイスは自由に組み合わせられます。例えば 6・4・3 なら「移動6＋治療3」「移動3＋治療6＋移動4」「治療6＋3」など、プレイヤーが自由に決められます。</p>
+
+      <div class="roller frame">
+        <div class="dice-row" id="rollerDice"></div>
+        <button class="roll-btn" id="rollBtn">🎲 サイコロを3個振る</button>
+        <p class="roller-caption">ダイスがない場合はここでシミュレーションできます。</p>
+      </div>
+    </div>
+
+    <!-- 支払い -->
+    <div class="phase" id="pay-phase">
+      <div class="phase-head">
+        <span class="idx">PHASE D</span>
+        <h3>医療班フェーズ｜支払い</h3>
+      </div>
+      <p>医療班は、研究維持のために研究データを1枚提出します。研究カードから任意の1枚を選択して捨て札に移動させます (このタイミングで研究カードは必ず3枚になります)。</p>
+      <p style="font-size:13.5px;">この後、再び感染フェーズに戻ります。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     OUTBREAK
+============================================================ -->
+<section id="outbreak">
+  <div class="wrap">
+    <div class="eyebrow">Failure Condition</div>
+    <h2 class="sectitle"><em>アウトブレイク</em></h2>
+    <p class="lede">医療班フェーズ終了後、エリアごとに、未治療のカードのランクを合計します (A = 1、J / Q / K = 10)。合計が残りカード &times; 4 を超えた場合、そのエリアでアウトブレイクが発生します。</p>
+
+    <div class="hazard">
+      <div class="hazard-tape"></div>
+      <div class="hazard-body">
+        <h3>⚠ アウトブレイク発生  =  即敗北</h3>
+        <p>いずれかのエリアでアウトブレイクが発生した時点で、ゲームは失敗となり終了します。</p>
+        <div class="example-row">
+          <div class="card-grid2">
+            <span class="card-back" style="--card-w:56px"></span>
+            <span class="card" style="--r:3;--c:10"></span>
+            <span class="card" style="--r:3;--c:7"></span>
+            <span class="card" style="--r:3;--c:4"></span>
+          </div>
+          <div class="hazard-formula">10 + 8 + 5 &gt; 3 &times; 7<br>23 &gt; 21<br>↓<br>アウトブレイク</div>
+        </div>
+      </div>
+    </div>
+
+    <table class="rules-table" style="max-width:420px;">
+      <thead><tr><th class="num">未治療カード数</th><th class="num">アウトブレイク値</th></tr></thead>
+      <tbody>
+        <tr><td class="num">4</td><td class="num">28</td></tr>
+        <tr><td class="num">3</td><td class="num">21</td></tr>
+        <tr><td class="num">2</td><td class="num">14</td></tr>
+        <tr><td class="num">1</td><td class="num">7</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================
+     WIN / LOSE
+============================================================ -->
+<section id="win">
+  <div class="wrap">
+    <div class="eyebrow">Victory Condition</div>
+    <h2 class="sectitle">勝利条件</h2>
+    <p class="lede">エリアを完治させたら勝利です。難易度によって、必要な完治エリアの数が変わります。</p>
+
+    <div class="diff-grid">
+      <div class="diff-card easy frame">
+        <div class="label">EASY</div>
+        <div class="num">2</div>
+        <div class="cap">エリアを完治させる</div>
+      </div>
+      <div class="diff-card normal frame">
+        <div class="label">NORMAL</div>
+        <div class="num">3</div>
+        <div class="cap">エリアを完治させる</div>
+      </div>
+      <div class="diff-card hard frame">
+        <div class="label">HARD</div>
+        <div class="num">4</div>
+        <div class="cap">エリアを完治させる</div>
+      </div>
+    </div>
+
+    <div style="margin-top:40px;">
+      <div class="eyebrow">Defeat Condition</div>
+      <h2 class="sectitle">敗北条件</h2>
+      <p class="lede">いずれかのエリアでアウトブレイクが発生した時点で敗北です (詳細は前項「アウトブレイク」を参照)。</p>
+    </div>
+
+    <div class="panel frame" style="margin-top:32px;">
+      <h3 style="font-size:16px; margin-bottom:8px; font-family:var(--font-pixel);">山札がなくなった場合</h3>
+      <p style="font-size:14px; margin:0;">山札がなくなった場合は、捨て札をシャッフルして新しい山札を作り、ゲームはそのまま継続します。カード枯渇によるゲーム終了はありません。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     WIN / LOSE
+============================================================ -->
+<section id="disclaimer">
+  <div class="wrap">
+    <div class="eyebrow">Caution</div>
+      <p class="lede">
+        本ゲームはAIを活用して開発しました。
+        意図せず既存のゲームと類似したルールになっている可能性がありますが、特定のゲームを模倣・侵害する意図はありません。
+        同様のルールをお持ちの方がいらっしゃれば、<i class="fa-brands fa-x-twitter"></i> <a href="https://x.com/Dnal_Yen_Sid" target="_blank" rel="noopener" style="color:inherit;">@Dnal_Yen_Sid</a> までご一報いただけますと幸いです。
+        (2026.8.11)
+    </p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand" style="justify-content:center;"><span class="dot"></span>CONTAGION</div>
+    <p>SOLO PANDEMIC SIMULATION — CARD &amp; DICE RULEBOOK</p>
+    <a class="backtotop" href="#top">▲ トップへ戻る</a>
+  </div>
+</footer>
+
+<script>
+// ---------- nav toggle ----------
+const navToggle = document.getElementById('navToggle');
+const navLinks = document.getElementById('navLinks');
+navToggle.addEventListener('click', () => {
+  const open = navLinks.classList.toggle('open');
+  navToggle.setAttribute('aria-expanded', open);
+});
+navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+  navLinks.classList.remove('open');
+  navToggle.setAttribute('aria-expanded', 'false');
+}));
+
+// ---------- rank strip (A..K of spades, with infection value) ----------
+const rankStrip = document.getElementById('rankStrip');
+const ranks = [
+  ['A','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],
+  ['8','8'],['9','9'],['10','10'],['J','10'],['Q','10'],['K','10']
+];
+ranks.forEach((r, i) => {
+  const wrap = document.createElement('div');
+  wrap.className = 'rk';
+  wrap.innerHTML = `<span class="card" style="--r:0;--c:${i};--card-w:44px"></span><b>感染力 ${r[1]}</b>`;
+  rankStrip.appendChild(wrap);
+});
+
+// ---------- die pip renderer ----------
+const PIP_LAYOUTS = {
+  1:[4],
+  2:[0,8],
+  3:[0,4,8],
+  4:[0,2,6,8],
+  5:[0,2,4,6,8],
+  6:[0,2,3,5,6,8]
+};
+function renderDie(value){
+  const die = document.createElement('div');
+  die.className = 'die';
+  for(let i=0;i<9;i++){
+    const p = document.createElement('i');
+    if(PIP_LAYOUTS[value].includes(i)) p.classList.add('on');
+    die.appendChild(p);
+  }
+  return die;
+}
+function renderDiceRow(container, values){
+  container.innerHTML = '';
+  values.forEach(v => container.appendChild(renderDie(v)));
+  const sum = document.createElement('span');
+  sum.className = 'dice-sum';
+  sum.textContent = '合計 ' + values.reduce((a,b)=>a+b,0);
+  container.appendChild(sum);
+}
+
+// static example dice
+renderDiceRow(document.getElementById('exampleDice1'), [4,3,2]);
+
+// roller
+const rollerDice = document.getElementById('rollerDice');
+const rollBtn = document.getElementById('rollBtn');
+function roll(){
+  const vals = [1,2,3].map(()=>Math.ceil(Math.random()*6));
+  renderDiceRow(rollerDice, vals);
+  [...rollerDice.querySelectorAll('.die')].forEach(d=>{
+    d.classList.add('rolling');
+    setTimeout(()=>d.classList.remove('rolling'), 500);
+  });
+}
+rollBtn.addEventListener('click', roll);
+roll();
+
+// ---------- movement reachable grid (dice value = 2, orthogonal distance) ----------
+const moveGrid = document.getElementById('moveGrid');
+const centerR = 2, centerC = 1; // 0-indexed within 4x4
+for(let r=0;r<4;r++){
+  for(let c=0;c<4;c++){
+    const cell = document.createElement('div');
+    const dist = Math.abs(r-centerR) + Math.abs(c-centerC);
+    if(r===centerR && c===centerC){
+      cell.classList.add('here');
+      cell.textContent = '班';
+    } else if(dist <= 2){
+      cell.classList.add('reach');
+      cell.textContent = '○';
+    }
+    moveGrid.appendChild(cell);
+  }
+}
+</script>
+</body>
+</html>
