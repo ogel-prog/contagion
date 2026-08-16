@@ -243,6 +243,20 @@ a{color:inherit;}
   width:100%; height:100%; object-fit:cover; display:block;
 }
 
+.hero-app-link{
+  display:inline-flex; align-items:center; gap:8px;
+  margin-top:24px; padding:12px 24px;
+  background:var(--danger); color:#fff;
+  font-family:var(--font-pixel); font-size:16px; font-weight:700;
+  text-decoration:none; border-radius:var(--radius-m);
+  box-shadow:0 0 20px -4px var(--danger);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.hero-app-link:hover{
+  transform:translateY(-2px);
+  box-shadow:0 0 28px -2px var(--danger);
+}
+
 .meta-chips{display:flex; flex-wrap:wrap; gap:9px; margin-top:22px;}
 .chip{
   font-family:var(--font-mono); font-size:12px;
@@ -406,7 +420,6 @@ h2.sectitle em{font-style:normal; color:var(--danger); text-shadow:0 0 14px #FF2
   box-shadow:0 0 14px -6px var(--spade);
 }
 .loop .arrow{font-size:20px; color:var(--ink-faint); padding:0 12px;}
-.loop-note{text-align:center; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); margin-bottom:0;}
 
 /* ============================================================
    PHASE BLOCK
@@ -488,6 +501,8 @@ table.rules-table td.num, table.rules-table th.num{font-family:var(--font-mono);
   display:inline-block;
 }
 
+#time-limit-phase h3 { color: var(--danger); text-shadow: 0 0 10px #FF2B4460; }
+
 /* ============================================================
    WIN / LOSE TABLE
 ============================================================ */
@@ -504,6 +519,39 @@ table.rules-table td.num, table.rules-table th.num{font-family:var(--font-mono);
 .diff-card.normal .num{color:var(--diamond); text-shadow:0 0 16px var(--diamond);}
 .diff-card.hard .num{color:var(--heart); text-shadow:0 0 16px var(--heart);}
 
+/* 5列レイアウトへの拡張（スマホ時は1列） */
+.diff-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+@media (max-width: 840px) {
+  .diff-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .diff-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* NOVICE (チュートリアル/安心感のある青〜水色系) */
+.diff-card.novice .num {
+  color: var(--spade);
+  text-shadow: 0 0 16px var(--spade);
+}
+
+/* MASTER (最高難易度/紫〜ピンク系の禍々しいカラー) */
+.diff-card.master {
+  border-color: var(--danger);
+}
+.diff-card.master .num {
+  color: #D652FF;
+  text-shadow: 0 0 16px #D652FF;
+}
 /* ============================================================
    DICE ROLLER (interactive)
 ============================================================ */
@@ -576,6 +624,10 @@ footer .brand{justify-content:center; margin-bottom:14px;}
 
     <div class="hero-visual-frame frame">
       <img src="./images/eyecatch.png" alt="CONTAGION">
+    </div>
+
+    <div>
+      <a href="app.html" target="_blank" class="hero-app-link">🎮 Webアプリ版で遊ぶ</a>
     </div>
 
     <div class="meta-chips">
@@ -770,7 +822,6 @@ footer .brand{justify-content:center; margin-bottom:14px;}
       <div class="lp">医療班フェーズ</div>
       <div class="arrow">↻</div>
     </div>
-    <p class="loop-note">REPEAT UNTIL WIN OR OUTBREAK</p>
 
     <!-- 感染フェーズ -->
     <div class="phase" id="infect-phase">
@@ -840,14 +891,23 @@ footer .brand{justify-content:center; margin-bottom:14px;}
       <p style="margin-top:20px;"><b>アウトブレイクのチェック</b> ― 再感染することでアウトブレイク状態になる可能性があります。アウトブレイクの確認は医療班フェーズ後になるので、ただちにゲームオーバーにはなりません。</p>
     </div>
 
+    <div class="phase" id="medical-team-phase">
+      <div class="phase-head">
+        <span class="idx">PHASE B</span>
+        <h3>医療班フェーズ</h3>
+      </div>
+      <p>感染フェーズが終了すると、医療班フェーズになります。まず山札から研究カードを補充し (このタイミングで研究カードは必ず4枚になります)。</p>
+      <p>続いて、サイコロを3つ振ります。出た目がわかるようにして手元に並べます。</p>
+      <p>この後、研究・移動・治療を好きな順番に処理します。研究は1ターンに1回のみです。移動・治療はサイコロが残っている限り移動・治療できます。</p>
+    </div>
+
     <!-- 研究 -->
     <div class="phase" id="research-phase">
       <div class="phase-head">
-        <span class="idx">PHASE B</span>
-        <h3>医療班フェーズ｜研究</h3>
+        <h4>医療班フェーズ｜研究</h4>
       </div>
-      <p>感染フェーズが終了すると、医療班フェーズになります。まず山札から研究カードを補充し (このタイミングで研究カードは必ず4枚になります)、その後、研究を行うことができます。研究は行わなくてもかまいません。</p>
       <p>研究カードから1枚を選び、選んだカードを同じスートのエリアにある任意のカード1枚と交換できます。交換した感染カードは手札の研究カードに回収します。研究によって、感染カードのランクを下げることも、上げることもできます。</p>
+      <p>研究は行わなくてもかまいません。</p>
 
       <div class="example frame">
         <span class="ex-label">Example — 研究カード ♥4 を使用</span>
@@ -870,30 +930,39 @@ footer .brand{justify-content:center; margin-bottom:14px;}
       </div>
     </div>
 
-    <!-- 治療 -->
+    <!-- 医療班フェーズ｜移動 -->
     <div class="phase" id="move-phase">
       <div class="phase-head">
-        <span class="idx">PHASE C</span>
-        <h3>医療班フェーズ｜治療</h3>
+        <h4>医療班フェーズ｜移動</h4>
       </div>
-      <p>3個のダイスを振ります。出た目は「移動」または「治療」に自由に割り振れます。3個すべてを移動に使っても、すべて治療に使っても、一部だけでもかまいません。</p>
-
-      <p style="margin-top:20px;"><b>移動</b> ― ダイス1個を移動に使用すると、その出目以下のマス数を移動できます。上下左右にのみ移動でき、斜め移動はできません。</p>
+      <p>ダイスを1つ消費して移動できます。その出目以下のマス数を移動できます。上下左右にのみ移動でき、斜め移動はできません。</p>
 
       <div class="example frame">
         <span class="ex-label">出目が 2 の場合の移動可能マス</span>
         <div class="move-grid" aria-hidden="true" id="moveGrid"></div>
       </div>
+    </div>
 
-      <p style="margin-top:20px;"><b>治療</b> ― 治療は医療班が現在いるマスに対して行います。治療に使用するダイスの合計値が、そのマスの感染カードのランク以上であれば、そのカードを治療できます。治療されたカードは裏返します。</p>
+    <!-- 治療 -->
+    <div class="phase" id="move-phase">
+      <div class="phase-head">
+        <h4>治療</h4>
+      </div>
+      <p>治療は医療班が現在いるマスに対して行います。治療に使用するダイスの合計値が、そのマスの感染カードのランク以上であれば、そのカードを治療できます。治療されたカードは裏返します。</p>
 
       <div class="example frame">
         <span class="ex-label">Example — 現在地の感染カードが ♥7、ダイスは 4・3・2</span>
         <div class="dice-row" id="exampleDice1"></div>
         <p style="margin:12px 0 0; font-size:13.5px;">4 と 3 を治療に使うと合計7となり、♥7 を治療できます。治療できた感染カードは裏返します。</p>
       </div>
+    </div>
 
-      <p style="margin-top:20px;"><b>ダイスの割り振り</b> ― ダイスは自由に組み合わせられます。例えば 6・4・3 なら「移動6＋治療3」「移動3＋治療6＋移動4」「治療6＋3」など、プレイヤーが自由に決められます。</p>
+    <!-- ダイスの割り振り -->
+    <div class="phase">
+      <div class="phase-head">
+        <h4>ダイスの割り振り</h4>
+      </div>
+      <p>ダイスは自由に組み合わせられます。例えば 6・4・3 なら「移動6＋治療3」「移動3＋治療6＋移動4」「治療6＋3」など、プレイヤーが自由に決められます。</p>
 
       <div class="roller frame">
         <div class="dice-row" id="rollerDice"></div>
@@ -905,11 +974,20 @@ footer .brand{justify-content:center; margin-bottom:14px;}
     <!-- 支払い -->
     <div class="phase" id="pay-phase">
       <div class="phase-head">
-        <span class="idx">PHASE D</span>
+        <span class="idx">PHASE C</span>
         <h3>医療班フェーズ｜支払い</h3>
       </div>
       <p>医療班は、研究維持のために研究データを1枚提出します。研究カードから任意の1枚を選択して捨て札に移動させます (このタイミングで研究カードは必ず3枚になります)。</p>
       <p style="font-size:13.5px;">この後、再び感染フェーズに戻ります。</p>
+    </div>
+
+    <!-- 時限 -->
+    <div class="phase" id="time-limit-phase">
+      <div class="phase-head">
+        <span class="idx">PHASE D</span>
+        <h3>時限フェーズ</h3>
+      </div>
+      <p>MASTERモードではターンの最後に時限モードが発生します。山札の上から1枚、時限の山に捨てます。山札がなくなった場合、時限の山からはカードを復活させられません。感染フェーズ、研究フェーズのドローで山札からカードが引けなくなった場合も敗北となります。</p>
     </div>
   </div>
 </section>
@@ -921,7 +999,7 @@ footer .brand{justify-content:center; margin-bottom:14px;}
   <div class="wrap">
     <div class="eyebrow">Failure Condition</div>
     <h2 class="sectitle"><em>アウトブレイク</em></h2>
-    <p class="lede">医療班フェーズ終了後、エリアごとに、未治療のカードのランクを合計します (A = 1、J / Q / K = 10)。合計が残りカード &times; 4 を超えた場合、そのエリアでアウトブレイクが発生します。</p>
+    <p class="lede">医療班フェーズ終了後、エリアごとに、未治療のカードのランクをチェックします。残っているカードのランクが全て8を超えた場合 (8、9、10、J、Q、K)、そのエリアでアウトブレイクが発生します。</p>
 
     <div class="hazard">
       <div class="hazard-tape"></div>
@@ -933,22 +1011,12 @@ footer .brand{justify-content:center; margin-bottom:14px;}
             <span class="card-back" style="--card-w:56px"></span>
             <span class="card" style="--r:3;--c:10"></span>
             <span class="card" style="--r:3;--c:7"></span>
-            <span class="card" style="--r:3;--c:4"></span>
+            <span class="card" style="--r:3;--c:9"></span>
           </div>
-          <div class="hazard-formula">10 + 8 + 5 &gt; 3 &times; 7<br>23 &gt; 21<br>↓<br>アウトブレイク</div>
+          <div class="hazard-formula">治療をすることによって残りが全てランク8以上になることもあるので治療の順番を熟慮してください。</div>
         </div>
       </div>
     </div>
-
-    <table class="rules-table" style="max-width:420px;">
-      <thead><tr><th class="num">未治療カード数</th><th class="num">アウトブレイク値</th></tr></thead>
-      <tbody>
-        <tr><td class="num">4</td><td class="num">28</td></tr>
-        <tr><td class="num">3</td><td class="num">21</td></tr>
-        <tr><td class="num">2</td><td class="num">14</td></tr>
-        <tr><td class="num">1</td><td class="num">7</td></tr>
-      </tbody>
-    </table>
   </div>
 </section>
 
@@ -962,6 +1030,11 @@ footer .brand{justify-content:center; margin-bottom:14px;}
     <p class="lede">エリアを完治させたら勝利です。難易度によって、必要な完治エリアの数が変わります。</p>
 
     <div class="diff-grid">
+      <div class="diff-card novice frame">
+        <div class="label">NOVICE</div>
+        <div class="num">1</div>
+        <div class="cap">エリアを完治させる</div>
+      </div>
       <div class="diff-card easy frame">
         <div class="label">EASY</div>
         <div class="num">2</div>
@@ -977,17 +1050,24 @@ footer .brand{justify-content:center; margin-bottom:14px;}
         <div class="num">4</div>
         <div class="cap">エリアを完治させる</div>
       </div>
+      <div class="diff-card master frame">
+        <div class="label">MASTER</div>
+        <div class="num">4</div>
+        <div class="cap">エリアを完治させる<br>時限フェーズあり</div>
+      </div>
     </div>
 
     <div style="margin-top:40px;">
       <div class="eyebrow">Defeat Condition</div>
       <h2 class="sectitle">敗北条件</h2>
       <p class="lede">いずれかのエリアでアウトブレイクが発生した時点で敗北です (詳細は前項「アウトブレイク」を参照)。</p>
+      <p class="lede">感染カード、研究カードのドロー時にカードが引けなくなった場合も敗北です。</p>
     </div>
 
     <div class="panel frame" style="margin-top:32px;">
       <h3 style="font-size:16px; margin-bottom:8px; font-family:var(--font-pixel);">山札がなくなった場合</h3>
       <p style="font-size:14px; margin:0;">山札がなくなった場合は、捨て札をシャッフルして新しい山札を作り、ゲームはそのまま継続します。カード枯渇によるゲーム終了はありません。</p>
+      <p style="font-size:14px; margin:0;">ただし、MASTERモードで出現する時限の山からはカードを戻すことができません。MASTERモードではカード枯渇による敗北が発生します。</p>
     </div>
   </div>
 </section>

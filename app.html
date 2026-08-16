@@ -5,597 +5,229 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>CONTAGION</title>
 <style>
-/* ============================================================================
-   TOKENS（色・タイポグラフィ・共通寸法）
-   参照：仕様書 10-3改訂 / 21章 / 27章(①〜⑤, A〜E)
-   ・カードは背景/枠線をスート共通にし、文字色だけをスートで変える
-   ・選択強調色は「意味」ごとに分離したトークンを持つ
-   ・フォントはシステムフォントのみ（画像/外部リソース一切なし）
-============================================================================ */
 :root{
   color-scheme: dark;
-
-  /* ベース */
-  --bg-outer:#05070C;      /* 400x650フレームの外側（プレビュー用の余白） */
-  --bg:#0A0E17;             /* アプリ本体の背景 */
-  --bg-deep:#060810;        /* 盤面のセル等、一段暗い面 */
-  --panel:#1C2A45;          /* カード/パネルの共通背景（アプリ背景とはっきり区別できる明るさに） */
-  --line:#3C4E75;           /* 罫線・枠線（視認性を優先し明るめに） */
+  --bg-outer:#05070C;
+  --bg:#0A0E17;
+  --bg-deep:#060810;
+  --panel:#1C2A45;
+  --line:#3C4E75;
   --ink:#E8EEF5;
   --ink-soft:#9FB0C7;
   --ink-faint:#5C6C87;
-
-  /* スート文字色（背景は統一のため、文字色のみで区別する。視認性を優先し明るめに） */
   --spade:#5FE3FF;
   --heart:#FF5473;
   --diamond:#FFC65C;
   --club:#49FFC7;
-
-  /* 選択・強調マーカー（用途ごとに独立トークン。値が同じでも分離しておく） */
-  --mark-team:#FFA733;      /* 医療班の現在位置（オレンジ） */
-  --mark-research:#4FD6FF;  /* 研究フェーズの選択（水色） */
-  --mark-payment:#4FD6FF;   /* 支払フェーズの選択（水色・研究とは別トークン） */
-  --mark-move:#FF4FD8;      /* 移動ダイス選択/移動可能マス（マゼンタ） */
-  --mark-treat:#9BE33B;     /* 治療ダイス選択（黄緑） */
-
-  /* 結果画面（勝敗）用 */
+  --mark-team:#FFA733;
+  --mark-research:#4FD6FF;
+  --mark-payment:#4FD6FF;
+  --mark-move:#FF4FD8;
+  --mark-treat:#9BE33B;
   --result-lose:#FF2B44;
   --result-win:#39FFB0;
-
-  /* 危険色（アウトブレイク等、マーカー色とは別に確保） */
   --danger:#FF2B44;
-
-  /* モーダル（12-4 / 27章③で確定：ダーク半透明。#1E3233系をベースに調整） */
   --modal-bg:#16232B;
   --modal-alpha:0.88;
-
-  /* フォント：システムフォントのみ */
   --font-body: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
-
   --radius-s:6px;
   --radius-m:10px;
 }
-
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
-/* 自前のdisplay指定（display:flex等）がhidden属性のデフォルト非表示を上書きしてしまう事故を防ぐ */
 [hidden]{ display:none !important; }
-html,body{
-  margin:0; padding:0; height:100%;
-  background:var(--bg-outer);
-  font-family:var(--font-body);
-  color:var(--ink);
-}
+html,body{ margin:0; padding:0; min-height:100%; background:var(--bg-outer); font-family:var(--font-body); color:var(--ink); }
 button{ font-family:inherit; }
-
-/* ============================================================================
-   アプリフレーム（スマホ想定：幅400px / 高さ650px以内）
-============================================================================ */
-#app{
-  width:400px;
-  max-width:100vw;
-  height:auto;
-  max-height:650px;
-  margin:0 auto;
-  position:relative;
-  overflow:hidden;
-  background:var(--bg);
-  display:flex;
-  flex-direction:column;
-}
-
-.screen{
-  display:flex;
-  flex-direction:column;
-}
+::-webkit-scrollbar { width:1px; height:1px; }
+#app{ width:400px; max-width:100vw; min-height:100vh; margin:0 auto; position:relative; background:var(--bg); display:flex; flex-direction:column; }
+.screen{ display:flex; flex-direction:column; min-height:100vh; }
 .screen[hidden]{ display:none; }
 
-/* ============================================================================
-   HOME 画面
-============================================================================ */
-#screen-home{
-  align-items:center;
-  justify-content:center;
-  gap:34px;
-  padding:24px;
-}
-
-.logo{
-  margin:0;
-  font-size:40px;
-  font-weight:800;
-  letter-spacing:.03em;
-  color:var(--ink);
-  text-shadow:0 0 6px var(--danger), 0 0 22px rgba(255,43,68,.55);
-}
-
-.debug-badge{
-  position:absolute;
-  top:10px; left:10px;
-  font-family:var(--font-mono);
-  font-size:10px;
-  letter-spacing:.08em;
-  color:var(--mark-move);
-  border:1px solid var(--mark-move);
-  border-radius:4px;
-  padding:2px 6px;
-  opacity:.85;
-}
-
-/* 難易度セレクター */
-.diff-row{
-  display:flex;
-  align-items:center;
-  gap:14px;
-}
-.diff-arrow{
-  width:44px; height:44px;
-  border-radius:8px;
-  border:1.5px solid var(--mark-research);
-  background:transparent;
-  color:var(--mark-research);
-  font-size:20px;
-  line-height:1;
-  cursor:pointer;
-}
+#screen-home{ align-items:center; justify-content:center; gap:34px; padding:24px; min-height:100vh; }
+.logo{ margin:0; font-size:40px; font-weight:800; letter-spacing:.03em; color:var(--ink); text-shadow:0 0 6px var(--danger), 0 0 22px rgba(255,43,68,.55); }
+.debug-badge{ position:absolute; top:10px; left:10px; font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; color:var(--mark-move); border:1px solid var(--mark-move); border-radius:4px; padding:2px 6px; opacity:.85; }
+.diff-row{ display:flex; align-items:center; gap:14px; }
+.diff-arrow{ width:44px; height:44px; border-radius:8px; border:1.5px solid var(--mark-research); background:transparent; color:var(--mark-research); font-size:20px; line-height:1; cursor:pointer; }
 .diff-arrow:active{ background:rgba(79,214,255,.15); }
-
-.diff-display{
-  width:180px;
-  height:52px;
-  border:1.5px solid var(--mark-research);
-  border-radius:8px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono);
-  font-size:18px;
-  font-weight:700;
-  letter-spacing:.08em;
-  color:var(--ink);
-  box-shadow:0 0 16px -6px var(--mark-research);
-}
-
-/* メニューボタン共通 */
-.menu-col{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  width:220px;
-}
-.btn-outline{
-  height:48px;
-  border-radius:8px;
-  border:1.5px solid var(--line);
-  background:transparent;
-  color:var(--ink);
-  font-size:15px;
-  letter-spacing:.06em;
-  cursor:pointer;
-}
+.diff-display{ width:180px; height:52px; border:1.5px solid var(--mark-research); border-radius:8px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:18px; font-weight:700; letter-spacing:.08em; color:var(--ink); box-shadow:0 0 16px -6px var(--mark-research); }
+.menu-col{ display:flex; flex-direction:column; gap:14px; width:220px; }
+.btn-outline{ height:48px; border-radius:8px; border:1.5px solid var(--line); background:transparent; color:var(--ink); font-size:15px; letter-spacing:.06em; cursor:pointer; }
 .btn-outline:active{ background:rgba(255,255,255,.06); }
-.btn-outline.primary{
-  border-color:var(--ink);
-}
+.btn-outline.primary{ border-color:var(--ink); }
+.btn-outline.danger{ border-color:var(--danger); color:var(--danger); }
 
-/* ============================================================================
-   GAME 画面
-============================================================================ */
-#screen-game{
-  align-items:stretch;
-  justify-content:flex-start;
-  color:var(--ink);
-}
-
-/* ============================================================================
-   RESULT 画面（20章 / 26-3〜26-4：勝敗共通、--result-accent で色だけ出し分け）
-============================================================================ */
-#screen-result{
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-}
+#screen-game{ align-items:stretch; justify-content:flex-start; color:var(--ink); padding-bottom:16px; }
+#screen-result{ align-items:center; justify-content:center; text-align:center; }
 #screen-result.lose{ --result-accent: var(--result-lose); }
 #screen-result.win{ --result-accent: var(--result-win); }
-.result-tape{
-  width:100%;
-  height:12px;
-  background:repeating-linear-gradient(45deg, var(--result-accent) 0 12px, var(--bg) 12px 24px);
-}
-.result-body{
-  padding:44px 28px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:14px;
-}
-.result-body h2{
-  font-family:var(--font-body);
-  font-size:26px;
-  font-weight:800;
-  letter-spacing:.06em;
-  color:var(--result-accent);
-  text-shadow:0 0 16px var(--result-accent);
-  margin:0;
-}
-.result-sub{
-  font-family:var(--font-mono);
-  font-size:12.5px;
-  color:var(--ink-soft);
-  margin:0 0 12px;
-}
+.result-tape{ width:100%; height:12px; background:repeating-linear-gradient(45deg, var(--result-accent) 0 12px, var(--bg) 12px 24px); }
+.result-body{ padding:44px 28px; display:flex; flex-direction:column; align-items:center; gap:14px; }
+.result-body h2{ font-family:var(--font-body); font-size:26px; font-weight:800; letter-spacing:.06em; color:var(--result-accent); text-shadow:0 0 16px var(--result-accent); margin:0; }
+.result-sub{ font-family:var(--font-mono); font-size:12.5px; color:var(--ink-soft); margin:0 0 12px; }
 #resultCloseBtn{ width:180px; }
 
-.game-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 14px 6px;
-}
-.game-header .title{
-  font-size:16px; font-weight:800; letter-spacing:.02em; color:var(--ink);
-}
-.rules-btn{
-  width:34px; height:34px;
-  border-radius:6px;
-  border:1px solid var(--line);
-  background:var(--panel);
-  color:var(--ink-soft);
-  font-size:14px;
-  cursor:pointer;
-}
-
-/* 山札／捨札の残数表示 */
-.stats-row{
-  display:flex;
-  justify-content:space-between;
-  padding:0 20px 4px;
-  font-family:var(--font-mono);
-  font-size:12px;
-  color:var(--ink-soft);
-}
+.game-header{ display:flex; align-items:center; justify-content:space-between; padding:6px 14px; }
+.game-header .title{ font-size:16px; font-weight:800; letter-spacing:.02em; color:var(--ink); }
+.game-header .mode-tag{ font-size:13px; font-weight:600; color:var(--mark-research); margin-left:6px; }
+.rules-btn{ width:34px; height:34px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--ink-soft); font-size:14px; cursor:pointer; }
+.stats-row{ display:flex; justify-content:space-between; padding:0 16px 2px; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft); }
 .stats-row b{ color:var(--ink); font-weight:700; }
+.discard-clickable{ cursor:pointer; text-decoration:underline; }
 
-/* ============================================================================
-   カード共通コンポーネント（10-3改訂：背景/枠線はスート共通、文字色だけ分ける）
-============================================================================ */
-.card-cell{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:6px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono);
-  font-weight:700;
-  font-size:13px;
-  position:relative;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 2px 6px -2px rgba(0,0,0,.6);
-}
+.card-cell{ background:var(--panel); border:1px solid var(--line); border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:13px; position:relative; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 2px 6px -2px rgba(0,0,0,.6); }
 .card-cell .rank{ letter-spacing:.01em; }
 .card-cell.suit-S .rank{ color:var(--spade); }
 .card-cell.suit-H .rank{ color:var(--heart); }
 .card-cell.suit-D .rank{ color:var(--diamond); }
 .card-cell.suit-C .rank{ color:var(--club); }
+.card-cell.is-team{ box-shadow:0 0 0 2px var(--mark-team), 0 0 10px -2px var(--mark-team); }
+.card-cell.is-team.is-blinking{ animation: blink 1.0s ease-in-out forwards; }
+.card-cell.is-outbreak-target{ box-shadow:0 0 0 2px var(--danger), 0 0 10px -2px var(--danger); }
+.card-cell.is-outbreak-target.is-blinking{ animation: blink 1.0s ease-in-out forwards; }
+.card-cell.is-win-target{ box-shadow:0 0 0 2px var(--result-win), 0 0 10px -2px var(--result-win); }
+.card-cell.is-win-target.is-blinking{ animation: blink 1.0s ease-in-out forwards; }
 
-/* 医療班の現在位置（オレンジの発光枠） */
-.card-cell.is-team{
-  box-shadow:0 0 0 2px var(--mark-team), 0 0 10px -2px var(--mark-team);
-}
-/* 研究フェーズ：選択中の手札／交換候補の病原体カード（水色の発光枠） */
-.card-cell.mark-research{
-  box-shadow:0 0 0 2px var(--mark-research), 0 0 10px -2px var(--mark-research);
-  cursor:pointer;
-}
-/* 医療班の現在地が同時に研究の交換候補になっている場合：二重リングで両方を示す */
-.card-cell.is-team.mark-research{
-  box-shadow:0 0 0 2px var(--mark-team), 0 0 0 4px var(--mark-research), 0 0 10px -2px var(--mark-research);
-}
-/* 治療フェーズ：移動ダイス選択中の移動可能マス（マゼンタの発光枠） */
-.card-cell.mark-move{
-  box-shadow:0 0 0 2px var(--mark-move), 0 0 10px -2px var(--mark-move);
-  cursor:pointer;
-}
+@keyframes blink { 0% { opacity: 1; } 25% { opacity: 0; } 50% { opacity: 1; } 75% { opacity: 0; } 100% { opacity: 1; } }
+
+.card-cell.mark-research{ box-shadow:0 0 0 2px var(--mark-research), 0 0 10px -2px var(--mark-research); cursor:pointer; }
+.card-cell.is-team.mark-research{ box-shadow:0 0 0 2px var(--mark-team), 0 0 0 4px var(--mark-research), 0 0 10px -2px var(--mark-research); }
+.card-cell.mark-move{ box-shadow:0 0 0 2px var(--mark-move), 0 0 10px -2px var(--mark-move); cursor:pointer; }
 .hand-row .card-cell{ cursor:pointer; }
 
-/* ダイストレイ（治療フェーズ：残っている未使用ダイス。タップで移動に使うダイスを選択） */
-.dice-tray{
-  display:flex;
-  gap:12px;
-  justify-content:center;
-  margin-top:12px;
-  min-height:46px;
-}
+.dice-tray{ display:flex; gap:12px; justify-content:center; align-items:center; height:42px; margin:4px 0; }
 .dice-tray .die{ cursor:pointer; }
-.die.mark-move{
-  box-shadow:0 0 0 2px var(--mark-move), 0 0 10px -2px var(--mark-move);
-}
-.die.mark-treat{
-  box-shadow:0 0 0 2px var(--mark-treat), 0 0 10px -2px var(--mark-treat);
-}
-.treat-cured-text{
-  text-align:center;
-  font-size:15px;
-  color:var(--ink-soft);
-  margin:26px 0;
-}
+.die.mark-move{ box-shadow:0 0 0 2px var(--mark-move), 0 0 10px -2px var(--mark-move); }
+.die.mark-treat{ box-shadow:0 0 0 2px var(--mark-treat), 0 0 10px -2px var(--mark-treat); }
+.treat-cured-text{ text-align:center; font-size:15px; color:var(--ink-soft); margin:26px 0; }
+
 .treat-fail-text{
   text-align:center;
   font-size:12.5px;
   font-family:var(--font-mono);
   color:var(--danger);
-  margin:2px 0 4px;
+  margin:2px 0;
+  height:18px;
+  line-height:18px;
+  visibility:hidden;
+}
+.treat-fail-text.is-visible{
+  visibility:visible;
 }
 
-/* ============================================================================
-   盤面（4x4）：トランプ比率(5:7程度)の縦長セルで統一。中央寄せは外側のflexで行う
-============================================================================ */
-.board-outer{
-  display:flex;
-  justify-content:center;
-  margin-top:10px;
-}
-.board-wrap{
-  position:relative;
-  padding:16px 20px;
-}
-.corner-suit{
-  position:absolute;
-  font-size:13px;
-  color:var(--ink-faint);
-}
+.board-outer{ display:flex; justify-content:center; }
+.board-wrap{ position:relative; padding:12px 20px 8px; }
+.corner-suit{ position:absolute; font-size:13px; color:var(--ink-faint); transition: color 0.3s ease; }
 .corner-suit.tl{ top:2px; left:6px; }
 .corner-suit.tr{ top:2px; right:6px; }
 .corner-suit.bl{ bottom:2px; left:6px; }
 .corner-suit.br{ bottom:2px; right:6px; }
+.corner-suit.is-outbreak { animation: outbreak-blink 0.8s ease-in-out infinite alternate; }
 
-.board-grid{
-  display:grid;
-  grid-template-columns:repeat(4, 56px);
-  grid-template-rows:repeat(4, 78px);
-  gap:6px;
+@keyframes outbreak-blink {
+  0% { color: #E066FF; text-shadow: 0 0 4px #D800FF, 0 0 10px #D800FF, 0 0 18px #B000FF; filter: drop-shadow(0 0 2px #E066FF); }
+  100% { color: #5C2A75; text-shadow: none; filter: none; }
 }
 
-/* ============================================================================
-   手札（研究カード）
-============================================================================ */
-.hand-row{
-  display:flex;
-  gap:8px;
-  justify-content:center;
-  margin-top:12px;
-}
+.board-grid{ display:grid; grid-template-columns:repeat(4, 56px); grid-template-rows:repeat(4, 78px); gap:6px; }
+.hand-row{ display:flex; gap:8px; justify-content:center; margin-top:2px; min-height:72px; }
 .hand-row .card-cell{ width:52px; height:72px; font-size:14px; }
-
-/* ============================================================================
-   フェーズ切替バー
-============================================================================ */
-.phase-bar{
-  margin-top:14px;
-  padding:0 14px 14px;
-  display:flex;
-  justify-content:center;
-}
-.phase-btn{
-  min-width:190px;
-  height:44px;
-  border-radius:8px;
-  border:1.5px solid var(--line);
-  background:var(--panel);
-  color:var(--ink-soft);
-  font-size:13.5px;
-  letter-spacing:.05em;
-  cursor:pointer;
-}
+.phase-bar{ margin-top:10px; padding:0 14px 10px; display:flex; justify-content:center; }
+.phase-btn{ min-width:190px; height:44px; border-radius:8px; border:1.5px solid var(--line); background:var(--panel); color:var(--ink-soft); font-size:13.5px; letter-spacing:.05em; cursor:pointer; }
 .phase-btn:disabled{ opacity:.6; cursor:default; }
 
-/* ============================================================================
-   ダイス共通コンポーネント（11章 / 27章⑤：装飾グローなし、ニュートラルな見た目）
-============================================================================ */
-.dice-row{
-  display:flex;
-  gap:16px;
-  justify-content:center;
-  margin:18px 0 6px;
-}
-.die{
-  --s:46px;
-  width:var(--s); height:var(--s);
-  border-radius:8px;
-  background:#EDEFF3;
-  border:1.5px solid #232A38;
-  display:grid;
-  grid-template-columns:repeat(3, 1fr);
-  grid-template-rows:repeat(3, 1fr);
-  padding:6px;
-  gap:2px;
-  flex-shrink:0;
-}
+.dice-row{ display:flex; gap:16px; justify-content:center; margin:18px 0 6px; }
+.die{ --s:42px; width:var(--s); height:var(--s); border-radius:8px; background:#EDEFF3; border:1.5px solid #232A38; display:grid; grid-template-columns:repeat(3, 1fr); grid-template-rows:repeat(3, 1fr); padding:5px; gap:2px; flex-shrink:0; }
 .die i{ border-radius:50%; }
 .die i.on{ background:#1A2436; }
-/* 傾き演出はインラインstyleではなくクラスで制御し、停止後は
-   どちらのクラスも付与しない＝transform指定自体が存在しない状態にする */
 .die.tilt-l{ transform:rotate(-45deg); }
 .die.tilt-r{ transform:rotate(45deg); }
 
-.modal-actions{
-  display:flex;
-  justify-content:center;
-  margin-top:8px;
+.modal-actions{ display:flex; justify-content:center; margin-top:8px; }
+#diceActionBtn, #infectionOkBtn, #researchOkBtn, #timerOkBtn, #treatAttemptBtn, #paymentSubmitBtn{ width: 180px; }
+
+.game-menu-col{ display:flex; flex-direction:column; gap:12px; align-items:center; margin-top:8px; }
+.game-menu-col .btn-outline{ width:200px; }
+
+.draw-card-wrap{ display:flex; justify-content:center; margin:18px 0; }
+.card-cell.draw-card{ width:96px; height:134px; font-size:24px; border-radius:9px; }
+.payment-hand-row{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin:18px 0; }
+.payment-hand-row .card-cell{ width:52px; height:72px; font-size:14px; cursor:pointer; }
+.card-cell.mark-payment{ box-shadow:0 0 0 2px var(--mark-payment), 0 0 10px -2px var(--mark-payment); }
+
+/* 捨て札・時限一覧表示用スタイル */
+.discard-grid{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; max-height:260px; overflow-y:auto; padding:8px 0; }
+.discard-grid .card-cell.mini-card{ width:36px; height:50px; font-size:11px; flex-shrink:0; border-radius:4px; }
+.discard-empty{ text-align:center; color:var(--ink-faint); font-size:13px; margin:20px 0; }
+
+.modal-overlay{ position:fixed; inset:0; background:rgba(5,7,12,.55); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:20px; z-index:100; transition: opacity 0.2s ease, background 0.2s ease; }
+.modal-overlay[hidden]{ display:none !important; }
+.modal-panel{ width:100%; max-width:360px; max-height:90vh; overflow-y:auto; background:rgba(22,35,43,var(--modal-alpha)); border:1px solid rgba(255,255,255,.08); border-radius:var(--radius-m); padding:20px 18px 22px; position:relative; box-shadow:0 20px 50px -20px rgba(0,0,0,.7); transition: opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+
+/* 時限モーダル専用の赤黒スタイル */
+.modal-panel.timer-theme {
+  background: rgba(35, 12, 16, 0.92);
+  border: 1px solid rgba(255, 60, 80, 0.35);
+  box-shadow: 0 20px 50px -20px rgba(150, 0, 20, 0.6), inset 0 0 15px rgba(255, 0, 40, 0.15);
 }
 
-/* ============================================================================
-   感染/研究カード ドローモーダル用の拡大カード表示
-============================================================================ */
-.draw-card-wrap{
-  display:flex;
-  justify-content:center;
-  margin:18px 0;
-}
-.card-cell.draw-card{
-  width:96px;
-  height:134px;
-  font-size:24px;
-  border-radius:9px;
-}
+.modal-overlay.animating { background: transparent !important; backdrop-filter: none !important; pointer-events: none; }
+.modal-panel.animating { background: transparent !important; border-color: transparent !important; box-shadow: none !important; }
 
-/* 支払モーダル：手札カード一覧（選択候補は水色の発光枠） */
-.payment-hand-row{
-  display:flex;
-  gap:8px;
-  justify-content:center;
-  flex-wrap:wrap;
-  margin:18px 0;
-}
-.payment-hand-row .card-cell{
-  width:52px;
-  height:72px;
-  font-size:14px;
-  cursor:pointer;
-}
-.card-cell.mark-payment{
-  box-shadow:0 0 0 2px var(--mark-payment), 0 0 10px -2px var(--mark-payment);
-}
+.modal-close{ position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:6px; border:1px solid var(--line); background:rgba(255,255,255,.04); color:var(--ink-soft); font-size:14px; cursor:pointer; }
+.modal-title{ margin:0 0 12px; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--ink); text-align:center; }
 
-/* ============================================================================
-   モーダル共通コンポーネント（12-4 / 27章③ / 17-5）
-   ・ダーク半透明バックドロップ
-   ・角ブラケット(HUD)意匠はここでは簡略化し、丸角パネル＋淡い枠で統一
-   ・closable=true の場合のみ右上に×ボタン
-============================================================================ */
-.modal-overlay{
-  position:absolute; inset:0;
-  background:rgba(5,7,12,.55);
-  backdrop-filter:blur(3px);
-  display:flex; align-items:center; justify-content:center;
-  padding:20px;
-  z-index:100;
-}
-.modal-overlay[hidden]{ display:none; }
-
-.modal-panel{
-  width:100%;
-  max-height:100%;
-  overflow-y:auto;
-  background:rgba(22,35,43,var(--modal-alpha));
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:var(--radius-m);
-  padding:20px 18px 22px;
-  position:relative;
-  box-shadow:0 20px 50px -20px rgba(0,0,0,.7);
-}
-
-.modal-close{
-  position:absolute;
-  top:10px; right:10px;
-  width:28px; height:28px;
-  border-radius:6px;
-  border:1px solid var(--line);
-  background:rgba(255,255,255,.04);
-  color:var(--ink-soft);
-  font-size:14px;
-  cursor:pointer;
-}
-
-.modal-title{
-  margin:0 0 12px;
-  font-size:15px;
-  font-weight:700;
-  letter-spacing:.04em;
-  color:var(--ink);
-  text-align:center;
-}
-
-/* ルールモーダルの本文（テキストのみ。サンプル表示等は行わない） */
-.rules-body{
-  font-size:12.5px;
-  line-height:1.9;
-  color:var(--ink-soft);
-}
-.rules-body h4{
-  margin:16px 0 6px;
-  font-size:12.5px;
-  color:var(--ink);
-  border-left:3px solid var(--mark-research);
-  padding-left:8px;
-}
+.rules-body{ font-size:12.5px; line-height:1.9; color:var(--ink-soft); }
+.rules-body h4{ margin:16px 0 6px; font-size:12.5px; color:var(--ink); border-left:3px solid var(--mark-research); padding-left:8px; }
 .rules-body h4:first-child{ margin-top:0; }
 .rules-body p{ margin:0 0 8px; }
-.rules-body table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:11.5px;
-  margin:6px 0 10px;
-}
-.rules-body th, .rules-body td{
-  border:1px solid var(--line);
-  padding:5px 7px;
-  text-align:left;
-  color:var(--ink-soft);
-}
-.rules-body th{
-  color:var(--ink);
-  font-family:var(--font-mono);
-  font-weight:600;
-}
+.rules-body table{ width:100%; border-collapse:collapse; font-size:11.5px; margin:6px 0 10px; }
+.rules-body th, .rules-body td{ border:1px solid var(--line); padding:5px 7px; text-align:left; color:var(--ink-soft); }
+.rules-body th{ color:var(--ink); font-family:var(--font-mono); font-weight:600; }
 </style>
 </head>
 <body>
 
 <div id="app">
-
-  <!-- ============================================================
-       HOME 画面
-  ============================================================= -->
   <section id="screen-home" class="screen">
     <div id="debugBadge" class="debug-badge" hidden>DEBUG MODE</div>
-
     <h1 class="logo">CONTAGION</h1>
-
     <div class="diff-row">
       <button class="diff-arrow" id="diffLeft" aria-label="難易度を下げる">‹</button>
       <div class="diff-display" id="diffLabel">NORMAL</div>
       <button class="diff-arrow" id="diffRight" aria-label="難易度を上げる">›</button>
     </div>
-
     <div class="menu-col">
       <button class="btn-outline primary" id="startBtn">スタート</button>
       <button class="btn-outline" id="homeRulesBtn">ルール</button>
     </div>
   </section>
 
-  <!-- ============================================================
-       GAME 画面
-  ============================================================= -->
   <section id="screen-game" class="screen" hidden>
     <div class="game-header">
-      <div class="title">CONTAGION</div>
+      <div class="title">CONTAGION <span id="gameHeaderMode" class="mode-tag">[NORMAL]</span></div>
       <button class="rules-btn" id="gameRulesBtn">▼</button>
     </div>
-
     <div class="stats-row">
       <span>山札：<b id="deckCount">0</b></span>
-      <span>捨札：<b id="discardCount">0</b></span>
+      <span id="timerContainer" class="discard-clickable" hidden>時限：<b id="timerBtn">0</b></span>
+      <span class="discard-clickable" id="discardBtn">捨札：<b id="discardCount">0</b></span>
     </div>
-
     <div class="board-outer">
       <div class="board-wrap">
-        <span class="corner-suit tl">♠</span>
-        <span class="corner-suit tr">♦</span>
-        <span class="corner-suit bl">♥</span>
-        <span class="corner-suit br">♣</span>
+        <span class="corner-suit tl" data-suit="S">♠</span>
+        <span class="corner-suit tr" data-suit="D">♦</span>
+        <span class="corner-suit bl" data-suit="H">♥</span>
+        <span class="corner-suit br" data-suit="C">♣</span>
         <div class="board-grid" id="boardGrid"></div>
       </div>
     </div>
-
-    <div class="dice-tray" id="diceTray" hidden></div>
-
+    <div class="dice-tray" id="diceTray"></div>
     <div class="hand-row" id="handRow"></div>
-
     <div class="phase-bar">
-      <button class="phase-btn" id="phaseBtn" disabled>感染フェーズ</button>
+      <button class="phase-btn" id="phaseBtn" disabled>支払いフェーズ</button>
     </div>
   </section>
 
-  <!-- ============================================================
-       RESULT 画面（勝敗共通。20章 / 26-3）
-  ============================================================= -->
   <section id="screen-result" class="screen" hidden>
     <div class="result-tape"></div>
     <div class="result-body">
@@ -606,54 +238,230 @@ button{ font-family:inherit; }
     <div class="result-tape"></div>
   </section>
 
-  <!-- ============================================================
-       共通モーダル（ルール表示）
-  ============================================================= -->
   <div id="modalOverlay" class="modal-overlay" hidden>
     <div class="modal-panel" id="modalPanel"></div>
   </div>
-
 </div>
 
 <script>
-/* ============================================================================
-   CONSTANTS
-   参照：仕様書 3章 / 8章 / 9章 / 19章 / 21章 / 24章 / 25章
-============================================================================ */
-
-// スート定義。SUIT_POSITIONは4x4盤面上での2x2エリアの位置（左上原点）
-const SUITS = ['S', 'H', 'D', 'C'];
-const SUIT_SYMBOL = { S: '♠', H: '♥', D: '♦', C: '♣' };
-const SUIT_POSITION = { S: 'topLeft', D: 'topRight', H: 'bottomLeft', C: 'bottomRight' };
-
-// エリア内4枚の並び順は固定で [topLeft, topRight, bottomLeft, bottomRight]
-// 25章の再感染ダイス（1:左上 2:右上 3:左下 4:右下）はこのインデックスに対応
-const AREA_SLOT_INDEX = { topLeft: 0, topRight: 1, bottomLeft: 2, bottomRight: 3 };
-const REINFECT_DIE_TO_SLOT = { 1: 0, 2: 1, 3: 2, 4: 3 }; // 5,6は該当なし
-
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-
-// ランク→感染力（21章：将来の変更に備えテーブル化。直接数値変換しない）
-const RANK_VALUES = {
-  A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7,
-  '8': 8, '9': 9, '10': 10, J: 10, Q: 10, K: 10,
-};
-function rankValue(rank) { return RANK_VALUES[rank]; }
-
-// 難易度（9章 / 27章A：ループする境界挙動）
-const DIFFICULTIES = ['EASY', 'NORMAL', 'HARD'];
-const DIFFICULTY_CLEAR_AREAS = { EASY: 2, NORMAL: 3, HARD: 4 };
-
-function shiftDifficulty(current, direction) {
-  const idx = DIFFICULTIES.indexOf(current);
-  const nextIdx = (idx + direction + DIFFICULTIES.length) % DIFFICULTIES.length;
-  return DIFFICULTIES[nextIdx];
+let audioCtx = null;
+function getAudioContext() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
 }
 
-// アウトブレイク閾値係数（19章：固定30ではなく「未治療枚数×係数」）
-const OUTBREAK_COEFFICIENT = 7;
+// 初回タップ時に確実にAudioContextを活性化
+window.addEventListener('pointerdown', () => {
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume();
+  }
+}, { once: true });
 
-// 移動オフセットテーブル（8章）：出目1〜6ぶんを起動時に一括生成
+// 統一SE（sound.html「研究カード交換」音）
+function playPipSE() {
+  try {
+    const ctx = getAudioContext(), t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.06);
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.06);
+  } catch (e) {}
+}
+
+function playDealSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime, bufferSize = ctx.sampleRate * 0.08, buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate), output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    const whiteNoise = ctx.createBufferSource(); whiteNoise.buffer = buffer;
+    const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.setValueAtTime(3000, now); filter.frequency.exponentialRampToValueAtTime(800, now + 0.08); filter.Q.setValueAtTime(2, now);
+    const gain = ctx.createGain(); gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    whiteNoise.connect(filter); filter.connect(gain); gain.connect(ctx.destination); whiteNoise.start(now);
+  } catch (e) {}
+}
+function playCardPlaceSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime, bufferSize = ctx.sampleRate * 0.03, buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate), output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource(); noise.buffer = buffer;
+    const noiseFilter = ctx.createBiquadFilter(); noiseFilter.type = 'highpass'; noiseFilter.frequency.setValueAtTime(2000, now);
+    const noiseGain = ctx.createGain(); noiseGain.gain.setValueAtTime(0.3, now); noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+    noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(ctx.destination);
+    const osc = ctx.createOscillator(), oscGain = ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(220, now); osc.frequency.exponentialRampToValueAtTime(80, now + 0.04);
+    oscGain.gain.setValueAtTime(0.2, now); oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    osc.connect(oscGain); oscGain.connect(ctx.destination);
+    noise.start(now); osc.start(now); osc.stop(now + 0.04);
+  } catch (e) {}
+}
+
+function playDiceRollSE() {
+  try {
+    const ctx = getAudioContext();
+    for (let i = 0; i < 8; i++) {
+      setTimeout(() => {
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300 + Math.random() * 250, t);
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t); osc.stop(t + 0.03);
+      }, i * 40);
+    }
+  } catch (e) {}
+}
+
+function playCrumpleSE() {
+  try {
+    const ctx = getAudioContext(), bufferSize = ctx.sampleRate * 0.25, buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate), output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    const whiteNoise = ctx.createBufferSource(); whiteNoise.buffer = buffer;
+    const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.setValueAtTime(1200, ctx.currentTime); filter.Q.setValueAtTime(3, ctx.currentTime);
+    const gain = ctx.createGain(); gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+    whiteNoise.connect(filter); filter.connect(gain); gain.connect(ctx.destination); whiteNoise.start(ctx.currentTime);
+  } catch (e) {}
+}
+function playPoisonSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime, drops = [0, 0.08, 0.18, 0.28];
+    drops.forEach((timeOffset, idx) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain(), dropTime = now + timeOffset;
+      osc.type = 'sine'; osc.frequency.setValueAtTime(400 + idx * 100, dropTime); osc.frequency.exponentialRampToValueAtTime(150, dropTime + 0.06);
+      gain.gain.setValueAtTime(0.25, dropTime); gain.gain.exponentialRampToValueAtTime(0.001, dropTime + 0.06);
+      osc.connect(gain); gain.connect(ctx.destination); osc.start(dropTime); osc.stop(dropTime + 0.06);
+    });
+  } catch (e) {}
+}
+
+function playBuzzerSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime;
+    const osc1 = ctx.createOscillator(), osc2 = ctx.createOscillator(), gain = ctx.createGain();
+    osc1.type = 'triangle'; osc2.type = 'triangle';
+    osc1.frequency.setValueAtTime(120, now); osc2.frequency.setValueAtTime(124, now);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.setValueAtTime(0, now + 0.12);
+    gain.gain.setValueAtTime(0.12, now + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
+    osc1.start(now); osc2.start(now);
+    osc1.stop(now + 0.35); osc2.stop(now + 0.35);
+  } catch (e) {}
+}
+
+function playCureSuccessSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime;
+    const freqs = [1046.50, 1318.51, 1567.98, 2093.00, 2637.02];
+    freqs.forEach((f, idx) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      const startTime = now + idx * 0.05;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, startTime);
+      gain.gain.setValueAtTime(0.15, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.25);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(startTime); osc.stop(startTime + 0.25);
+    });
+  } catch (e) {}
+}
+
+function playCoinSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime;
+    const osc1 = ctx.createOscillator(), osc2 = ctx.createOscillator(), gain = ctx.createGain();
+    osc1.type = 'sine'; osc2.type = 'sine';
+    osc1.frequency.setValueAtTime(987.77, now);
+    osc2.frequency.setValueAtTime(1318.51, now + 0.08);
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
+    osc1.start(now); osc1.stop(now + 0.15);
+    osc2.start(now + 0.08); osc2.stop(now + 0.4);
+  } catch (e) {}
+}
+
+function playGameOverSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(130, now);
+    osc.frequency.exponentialRampToValueAtTime(55, now + 0.6);
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.6);
+  } catch (e) {}
+}
+
+function playWinFanfareSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime;
+    const notes = [
+      { f: 523.25, duration: 0.1, delay: 0 },
+      { f: 659.25, duration: 0.1, delay: 0.1 },
+      { f: 783.99, duration: 0.1, delay: 0.2 },
+      { f: 1046.50, duration: 0.5, delay: 0.3 }
+    ];
+    notes.forEach(note => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      const startTime = now + note.delay;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(note.f, startTime);
+      gain.gain.setValueAtTime(0.25, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + note.duration);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(startTime); osc.stop(startTime + note.duration);
+    });
+  } catch (e) {}
+}
+
+function playSwooshSE() {
+  try {
+    const ctx = getAudioContext(), now = ctx.currentTime;
+    const bufferSize = ctx.sampleRate * 0.15, buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate), output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource(); noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(600, now);
+    filter.frequency.exponentialRampToValueAtTime(2500, now + 0.08);
+    filter.frequency.exponentialRampToValueAtTime(400, now + 0.15);
+    filter.Q.setValueAtTime(3, now);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.07);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    noise.start(now);
+  } catch (e) {}
+}
+
+const SUITS = ['S', 'D', 'C', 'H'];
+const SUIT_SYMBOL = { S: '♠', D: '♦', C: '♣', H: '♥' };
+const REINFECT_DIE_TO_SLOT = { 1: 0, 2: 1, 3: 2, 4: 3 };
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const RANK_VALUES = { A: 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, J: 10, Q: 10, K: 10 };
+function rankValue(rank) { return RANK_VALUES[rank]; }
+
+const DIFFICULTIES = ['NOVICE', 'EASY', 'NORMAL', 'HARD', 'MASTER'];
+const DIFFICULTY_CLEAR_AREAS = { NOVICE: 1, EASY: 2, NORMAL: 3, HARD: 4, MASTER: 4 };
+function shiftDifficulty(current, direction) {
+  const idx = DIFFICULTIES.indexOf(current);
+  return DIFFICULTIES[(idx + direction + DIFFICULTIES.length) % DIFFICULTIES.length];
+}
+
+const OUTBREAK_THRESHOLD = 8;
 const MOVE_OFFSETS = buildMoveOffsetTable();
 function buildMoveOffsetTable() {
   const table = {};
@@ -670,87 +478,12 @@ function buildMoveOffsetTable() {
   return table;
 }
 
-/* ============================================================================
-   DATA MODEL（3章 / 10章 / 19章 / 24章 / 26章）
-============================================================================ */
-
-// Card: { suit: 'S'|'H'|'D'|'C', rank: RANKS の要素 }
-// AreaCardSlot: { card: Card, faceUp: boolean }  ※faceUp=false は治療済み（裏向き）
-// Area: { cards: [slot0, slot1, slot2, slot3] }  // topLeft, topRight, bottomLeft, bottomRight 固定順
-//
-// GameState = {
-//   difficulty: 'EASY'|'NORMAL'|'HARD',
-//   areas: { S: Area, H: Area, D: Area, C: Area },
-//   deck: Card[],
-//   discard: Card[],
-//   hand: Card[],                 // 研究カード（常に3〜4枚）
-//   team: { x: 0-3, y: 0-3 },
-//   phase: 'INFECTION'|'RESEARCH'|'MOVE_TREAT'|'PAYMENT',
-//   dice: [{ id, value, used }],  // 治療フェーズで確定した3個のダイス
-//   uiSelection: { kind: null|'HAND_CARD'|'MOVE_DIE', value: null },
-//   status: 'PLAYING'|'WIN'|'LOSE',
-// }
-//
-// AppState = {
-//   screen: 'HOME'|'PLAYING'|'RESULT',
-//   popup: null | 'RULES' | 'INFECTION_DRAW' | 'RESEARCH_DRAW' | 'TREAT_DICE' | 'PAYMENT_DISCARD',
-//   resultType: null | 'WIN' | 'LOSE',
-//   selectedDifficulty: 'EASY'|'NORMAL'|'HARD',
-//   game: GameState | null,
-// }
-
 const AppState = {
-  screen: 'HOME',
-  popup: null,
-  resultType: null,
-  selectedDifficulty: 'NORMAL',
-  game: null,
+  screen: 'HOME', popup: null, resultType: null, selectedDifficulty: 'NORMAL', game: null, isBlinkingTeam: false,
+  outbreakSuits: [], winSuits: [],
 };
 
-/* ============================================================================
-   DEBUG MODE（今回の要件：カードの初期セットを指定して固定状態で開始できる）
-   ------------------------------------------------------------------
-   DEBUG_MODE を true にすると、setupGame() は乱数配置の代わりに
-   DEBUG_INITIAL_SETUP の内容をそのまま初期状態として使用する。
-   ステップ2以降（感染/研究/治療/アウトブレイク/クリアの各テスト）で
-   この値を書き換えながら検証していく想定。
-============================================================================ */
 const DEBUG_MODE = false;
-
-// 各エリアは [topLeft, topRight, bottomLeft, bottomRight] の順で4枚指定する。
-// rank未指定 or areas省略時はランダム配置にフォールバックする（setupGame側で対応予定）。
-const DEBUG_INITIAL_SETUP = {
-  areas: {
-    S: [
-      { rank: '6', faceUp: true }, { rank: '10', faceUp: true },
-      { rank: '4', faceUp: true }, { rank: '9', faceUp: true },
-    ],
-    D: [
-      { rank: 'A', faceUp: true }, { rank: 'Q', faceUp: true },
-      { rank: '5', faceUp: true }, { rank: '4', faceUp: true },
-    ],
-    H: [
-      { rank: 'Q', faceUp: true }, { rank: '8', faceUp: true },
-      { rank: '2', faceUp: true }, { rank: 'A', faceUp: true },
-    ],
-    C: [
-      { rank: '10', faceUp: true }, { rank: '7', faceUp: true },
-      { rank: '4', faceUp: true }, { rank: '2', faceUp: false }, // 治療済みサンプル
-    ],
-  },
-  hand: [ // 研究カード初期3枚
-    { suit: 'H', rank: '6' },
-    { suit: 'H', rank: '3' },
-    { suit: 'S', rank: '3' },
-  ],
-  team: { x: 2, y: 2 }, // 指定時はダイスロールを省略してこの位置から開始（ステップ2で対応）
-};
-
-/* ============================================================================
-   盤面座標ヘルパー（3章 / 10章 / 25章）
-   エリアの原点(2x2の左上)＋スロットオフセットで、盤面(x,y 0〜3)を一意に決める。
-   スロット順は固定で [topLeft, topRight, bottomLeft, bottomRight]。
-============================================================================ */
 const AREA_ORIGIN = { S: { x: 0, y: 0 }, D: { x: 2, y: 0 }, H: { x: 0, y: 2 }, C: { x: 2, y: 2 } };
 const SLOT_OFFSET = [ { dx: 0, dy: 0 }, { dx: 1, dy: 0 }, { dx: 0, dy: 1 }, { dx: 1, dy: 1 } ];
 
@@ -762,23 +495,28 @@ function suitForCell(x, y) {
 }
 function slotIndexForCell(x, y) {
   const lx = x % 2, ly = y % 2;
-  if (ly === 0) return lx === 0 ? 0 : 1;
-  return lx === 0 ? 2 : 3;
+  return ly === 0 ? (lx === 0 ? 0 : 1) : (lx === 0 ? 2 : 3);
 }
 function getCardSlotAt(game, x, y) {
-  const suit = suitForCell(x, y);
-  const idx = slotIndexForCell(x, y);
-  return game.areas[suit].cards[idx];
+  return game.areas[suitForCell(x, y)].cards[slotIndexForCell(x, y)];
+}
+function getCoordsForSuitSlot(suit, slotIdx) {
+  const origin = AREA_ORIGIN[suit], offset = SLOT_OFFSET[slotIdx];
+  return { x: origin.x + offset.dx, y: origin.y + offset.dy };
 }
 
-/* ============================================================================
-   デッキ構築 / セットアップ（19章 / 21章 / 24章）
-============================================================================ */
+function updateOutbreakStatus() {
+  const game = AppState.game;
+  if (!game) return;
+  SUITS.forEach(suit => {
+    const el = document.querySelector(`.corner-suit[data-suit="${suit}"]`);
+    if (el) el.classList.toggle('is-outbreak', checkOutbreak(game.areas[suit]));
+  });
+}
+
 function buildDeck() {
   const deck = [];
-  for (const suit of SUITS) {
-    for (const rank of RANKS) deck.push({ suit, rank });
-  }
+  for (const suit of SUITS) for (const rank of RANKS) deck.push({ suit, rank });
   return deck;
 }
 function shuffle(arr) {
@@ -791,901 +529,946 @@ function shuffle(arr) {
 }
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-// 19章：未治療枚数×OUTBREAK_COEFFICIENT を超えたらアウトブレイク
 function checkOutbreak(area) {
   const uncured = area.cards.filter(slot => slot.faceUp);
   if (uncured.length === 0) return false;
-  const sum = uncured.reduce((acc, slot) => acc + rankValue(slot.card.rank), 0);
-  const threshold = uncured.length * OUTBREAK_COEFFICIENT;
-  return sum > threshold;
+  return uncured.every(slot => rankValue(slot.card.rank) >= OUTBREAK_THRESHOLD);
 }
 
 function setupGame(difficulty) {
   const game = {
-    difficulty,
-    areas: {},
-    deck: [],
-    discard: [],
-    hand: [],
-    team: null,
-    phase: 'INFECTION',
-    dice: [],
-    diceRollModal: null,
-    pendingInfectionCard: null,   // 感染フェーズ：ドローして確認中のカード
-    pendingReinfectSuit: null,    // 完治エリアへの再感染ダイス待ち中のスート
-    pendingResearchCard: null,    // 研究フェーズ：ドローして確認中のカード
-    researchExchangeDone: false,  // 研究フェーズ中の交換は1回のみ
-    treatModal: null,             // 治療モーダルの状態（mode/選択中ダイス/結果）
-    uiSelection: { kind: null, value: null },
-    status: 'PLAYING',
+    difficulty, areas: {}, deck: [], discard: [], timerPile: [], hand: [], team: null,
+    phase: 'INFECTION', dice: [], diceRollModal: null, pendingInfectionCard: null,
+    pendingReinfectSuit: null, pendingResearchCard: null, pendingTimerCard: null, researchExchangeDone: false,
+    treatModal: null, uiSelection: { kind: null, value: null }, status: 'PLAYING',
   };
 
-  if (DEBUG_MODE && DEBUG_INITIAL_SETUP.areas) {
-    // ---- デバッグ配置：指定内容をそのまま反映 ----
-    for (const suit of SUITS) {
-      const slots = DEBUG_INITIAL_SETUP.areas[suit];
-      game.areas[suit] = {
-        cards: slots.map(s => ({ card: { suit, rank: s.rank }, faceUp: s.faceUp })),
-      };
-    }
-    const handCards = (DEBUG_INITIAL_SETUP.hand || []).map(c => ({ suit: c.suit, rank: c.rank }));
-    const usedKeys = new Set([
-      ...SUITS.flatMap(suit => DEBUG_INITIAL_SETUP.areas[suit].map(s => suit + s.rank)),
-      ...handCards.map(c => c.suit + c.rank),
-    ]);
-    game.deck = shuffle(buildDeck().filter(c => !usedKeys.has(c.suit + c.rank)));
-    game.hand = handCards;
-    if (DEBUG_INITIAL_SETUP.team) game.team = { ...DEBUG_INITIAL_SETUP.team };
-  } else {
-    // ---- 通常セットアップ：スートごとにシャッフルし、初期アウトブレイクを再抽選 ----
-    const fullDeck = buildDeck();
-    const piles = {};
-    for (const suit of SUITS) piles[suit] = shuffle(fullDeck.filter(c => c.suit === suit));
+  const fullDeck = buildDeck();
+  const piles = {};
+  for (const suit of SUITS) piles[suit] = shuffle(fullDeck.filter(c => c.suit === suit));
 
-    for (const suit of SUITS) {
-      let picked;
-      while (true) {
-        picked = piles[suit].splice(0, 4);
-        const tempArea = { cards: picked.map(c => ({ card: c, faceUp: true })) };
-        if (!checkOutbreak(tempArea)) break;
-        piles[suit] = shuffle(piles[suit].concat(picked)); // 超過していれば戻して再シャッフル
-      }
-      game.areas[suit] = { cards: picked.map(c => ({ card: c, faceUp: true })) };
+  for (const suit of SUITS) {
+    let picked;
+    while (true) {
+      picked = piles[suit].splice(0, 4);
+      if (!checkOutbreak({ cards: picked.map(c => ({ card: c, faceUp: true })) })) break;
+      piles[suit] = shuffle(piles[suit].concat(picked));
     }
-
-    const remaining = SUITS.flatMap(suit => piles[suit]);
-    game.deck = shuffle(remaining);
-    game.hand = game.deck.splice(0, 3);
+    game.areas[suit] = { cards: picked.map(c => ({ card: c, faceUp: true })) };
   }
 
+  game.deck = shuffle(SUITS.flatMap(suit => piles[suit]));
+  game.hand = game.deck.splice(0, 3);
   return game;
 }
 
-// 24-2：ダイス3個の合計から医療班の初期位置(0〜3, 0〜3)を決定
 function resolveSetupPosition(diceValues) {
   let sum = diceValues.reduce((a, b) => a + b, 0);
-  if (sum === 17) sum = 1;
-  else if (sum === 18) sum = 2;
-  const index = sum - 1; // 0〜15
+  if (sum === 17) sum = 1; else if (sum === 18) sum = 2;
+  const index = sum - 1;
   return { x: index % 4, y: Math.floor(index / 4) };
 }
 
-/* ============================================================================
-   感染フェーズ ロジック（12章 / 25章）
-============================================================================ */
-// 山札が空なら捨て札をシャッフルして山札を作り直す（山札切れ対応）
 function drawCard(game) {
   if (game.deck.length === 0) {
+    if (game.discard.length === 0) {
+      return null;
+    }
     game.deck = shuffle(game.discard);
     game.discard = [];
   }
   return game.deck.shift();
 }
 
-function isAreaCured(area) {
-  return area.cards.every(slot => !slot.faceUp);
-}
+function isAreaCured(area) { return area.cards.every(slot => !slot.faceUp); }
 
-// 引いたカードより低いランクの未治療カードのうち、最も低いもののインデックスを返す（無ければ-1）
 function findLowestUncuredBelow(area, rank) {
   const targetValue = rankValue(rank);
-  let lowestIdx = -1;
-  let lowestValue = Infinity;
+  let lowestIdx = -1, lowestValue = Infinity;
   area.cards.forEach((slot, idx) => {
     if (slot.faceUp && rankValue(slot.card.rank) < targetValue && rankValue(slot.card.rank) < lowestValue) {
-      lowestValue = rankValue(slot.card.rank);
-      lowestIdx = idx;
+      lowestValue = rankValue(slot.card.rank); lowestIdx = idx;
     }
   });
   return lowestIdx;
 }
 
-// 12-3：通常の感染処理（対象エリアが完治済みでない場合）
 function applyInfection(game, card) {
   const area = game.areas[card.suit];
   const idx = findLowestUncuredBelow(area, card.rank);
   if (idx === -1) {
-    // 対象なし（ドローしたカードが最も低いランク）→ そのまま捨て札
     game.discard.push(card);
   } else {
-    const removed = area.cards[idx];
-    game.discard.push(removed.card);
+    game.discard.push(area.cards[idx].card);
     area.cards[idx] = { card, faceUp: true };
   }
+  updateOutbreakStatus();
 }
 
-// 25-2：完治エリアへの再感染（1:左上 2:右上 3:左下 4:右下、5/6は何も起きない）
 function applyReinfect(game, suit, dieValue) {
   const slotIdx = REINFECT_DIE_TO_SLOT[dieValue];
-  if (slotIdx !== undefined) {
-    game.areas[suit].cards[slotIdx].faceUp = true;
-  }
+  if (slotIdx !== undefined) game.areas[suit].cards[slotIdx].faceUp = true;
+  updateOutbreakStatus();
 }
 
-// フェーズ開始：山札から1枚引き、モーダルで確認させる（この時点で山札枚数が減る）
 function runInfectionPhase() {
   const game = AppState.game;
   game.phase = 'INFECTION';
   game.pendingInfectionCard = drawCard(game);
+  if (!game.pendingInfectionCard) {
+    triggerLose(game);
+    return;
+  }
+  playDealSE();
   AppState.popup = 'INFECTION_DRAW';
   render();
 }
 
 function onInfectionOk() {
-  const game = AppState.game;
-  const card = game.pendingInfectionCard;
-  const area = game.areas[card.suit];
-
+  const game = AppState.game, card = game.pendingInfectionCard, area = game.areas[card.suit];
   if (isAreaCured(area)) {
-    // 25章：完治エリアの場合、ドローしたカードは捨て札へ。ダイス1個で再感染判定
     game.discard.push(card);
     game.pendingInfectionCard = null;
     game.pendingReinfectSuit = card.suit;
     openDiceRollModal('REINFECT', 1, '感染カード');
   } else {
-    applyInfection(game, card);
-    game.pendingInfectionCard = null;
-    runResearchPhase(); // 感染処理が終わったら研究フェーズへ自動遷移
+    const idx = findLowestUncuredBelow(area, card.rank);
+    if (idx === -1) {
+      playCrumpleSE();
+      applyInfection(game, card);
+      game.pendingInfectionCard = null;
+      closeModal(false);
+      runResearchPhase();
+    } else {
+      playPoisonSE();
+      animateInfectionCardMove(card, idx, () => {
+        applyInfection(game, card);
+        game.pendingInfectionCard = null;
+        closeModal(false);
+        setTimeout(() => runResearchPhase(), 500);
+      });
+    }
   }
 }
 
-/* ============================================================================
-   研究フェーズ ロジック（13章）
-============================================================================ */
+function animateInfectionCardMove(card, slotIdx, onComplete) {
+  const cardEl = document.getElementById('infectionDrawCard'), overlay = document.getElementById('modalOverlay'), panel = document.getElementById('modalPanel');
+  if (!cardEl || !overlay || !panel) { onComplete(); return; }
+  const coords = getCoordsForSuitSlot(card.suit, slotIdx);
+  const targetCell = document.querySelector(`.card-cell[data-x="${coords.x}"][data-y="${coords.y}"]`);
+  if (!targetCell) { onComplete(); return; }
+
+  const startRect = cardEl.getBoundingClientRect(), targetRect = targetCell.getBoundingClientRect();
+  panel.classList.add('animating'); overlay.classList.add('animating');
+  const titleEl = panel.querySelector('.modal-title'), actionsEl = panel.querySelector('.modal-actions');
+  if (titleEl) titleEl.style.display = 'none';
+  if (actionsEl) actionsEl.style.display = 'none';
+
+  const animCard = cardEl.cloneNode(true);
+  Object.assign(animCard.style, {
+    position: 'fixed', left: startRect.left + 'px', top: startRect.top + 'px',
+    width: startRect.width + 'px', height: startRect.height + 'px', margin: '0',
+    zIndex: '9999', transformOrigin: 'top left', transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)'
+  });
+  document.body.appendChild(animCard);
+  cardEl.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    animCard.style.transform = `translate(${targetRect.left - startRect.left}px, ${targetRect.top - startRect.top}px) scale(${targetRect.width / startRect.width}, ${targetRect.height / startRect.height})`;
+  });
+  setTimeout(() => {
+    if (animCard.parentNode) animCard.parentNode.removeChild(animCard);
+    onComplete();
+  }, 500);
+}
+
+function animateResearchCardMove(onComplete) {
+  const cardEl = document.getElementById('researchDrawCard'), overlay = document.getElementById('modalOverlay'), panel = document.getElementById('modalPanel'), handRow = document.getElementById('handRow');
+  if (!cardEl || !overlay || !panel || !handRow) { onComplete(); return; }
+
+  const startRect = cardEl.getBoundingClientRect(), handRect = handRow.getBoundingClientRect();
+  const targetWidth = 52, targetHeight = 72;
+  const targetLeft = handRect.left + (handRect.width - targetWidth) / 2;
+  const targetTop = handRect.top + (handRect.height - targetHeight) / 2;
+
+  panel.classList.add('animating'); overlay.classList.add('animating');
+  const titleEl = panel.querySelector('.modal-title'), actionsEl = panel.querySelector('.modal-actions');
+  if (titleEl) titleEl.style.display = 'none';
+  if (actionsEl) actionsEl.style.display = 'none';
+
+  const animCard = cardEl.cloneNode(true);
+  Object.assign(animCard.style, {
+    position: 'fixed', left: startRect.left + 'px', top: startRect.top + 'px',
+    width: startRect.width + 'px', height: startRect.height + 'px', margin: '0',
+    zIndex: '9999', transformOrigin: 'top left', transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)'
+  });
+  document.body.appendChild(animCard);
+  cardEl.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    animCard.style.transform = `translate(${targetLeft - startRect.left}px, ${targetTop - startRect.top}px) scale(${targetWidth / startRect.width}, ${targetHeight / startRect.height})`;
+  });
+  setTimeout(() => {
+    playCardPlaceSE();
+    if (animCard.parentNode) animCard.parentNode.removeChild(animCard);
+    onComplete();
+  }, 500);
+}
+
+function animateSwapCards(handIndex, x, y, onComplete) {
+  const handCardCell = document.querySelector(`.hand-row .card-cell[data-hand-index="${handIndex}"]`);
+  const boardCardCell = document.querySelector(`.board-grid .card-cell[data-x="${x}"][data-y="${y}"]`);
+
+  if (!handCardCell || !boardCardCell) {
+    onComplete();
+    return;
+  }
+
+  playSwooshSE();
+
+  const handRect = handCardCell.getBoundingClientRect();
+  const boardRect = boardCardCell.getBoundingClientRect();
+
+  const animHandCard = handCardCell.cloneNode(true);
+  const animBoardCard = boardCardCell.cloneNode(true);
+
+  animHandCard.classList.remove('mark-research');
+  animBoardCard.classList.remove('mark-research');
+
+  Object.assign(animHandCard.style, {
+    position: 'fixed', left: handRect.left + 'px', top: handRect.top + 'px',
+    width: handRect.width + 'px', height: handRect.height + 'px', margin: '0',
+    zIndex: '9998', transformOrigin: 'top left', transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)'
+  });
+
+  Object.assign(animBoardCard.style, {
+    position: 'fixed', left: boardRect.left + 'px', top: boardRect.top + 'px',
+    width: boardRect.width + 'px', height: boardRect.height + 'px', margin: '0',
+    zIndex: '9998', transformOrigin: 'top left', transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)'
+  });
+
+  document.body.appendChild(animHandCard);
+  document.body.appendChild(animBoardCard);
+
+  handCardCell.style.opacity = '0';
+  boardCardCell.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    animHandCard.style.transform = `translate(${boardRect.left - handRect.left}px, ${boardRect.top - handRect.top}px) scale(${boardRect.width / handRect.width}, ${boardRect.height / handRect.height})`;
+    animBoardCard.style.transform = `translate(${handRect.left - boardRect.left}px, ${handRect.top - boardRect.top}px) scale(${handRect.width / boardRect.width}, ${handRect.height / boardRect.height})`;
+  });
+
+  setTimeout(() => {
+    if (animHandCard.parentNode) animHandCard.parentNode.removeChild(animHandCard);
+    if (animBoardCard.parentNode) animBoardCard.parentNode.removeChild(animBoardCard);
+    onComplete();
+  }, 500);
+}
+
 function runResearchPhase() {
   const game = AppState.game;
   game.phase = 'RESEARCH';
   game.researchExchangeDone = false;
   game.pendingResearchCard = drawCard(game);
+  if (!game.pendingResearchCard) {
+    triggerLose(game);
+    return;
+  }
+  playDealSE();
   AppState.popup = 'RESEARCH_DRAW';
   render();
 }
 
 function onResearchOk() {
   const game = AppState.game;
-  game.hand.push(game.pendingResearchCard);
-  game.pendingResearchCard = null;
-  AppState.popup = null;
+  animateResearchCardMove(() => {
+    game.hand.push(game.pendingResearchCard);
+    game.pendingResearchCard = null;
+    AppState.popup = null;
+    render();
+    runMoveTreatPhase();
+  });
+}
+
+function runTimerPhase() {
+  const game = AppState.game;
+  game.phase = 'TIMER';
+  game.pendingTimerCard = drawCard(game);
+  playDealSE();
+  AppState.popup = 'TIMER_DRAW';
   render();
 }
 
-// 13-4：選択中の手札と同じスート・未治療(表向き)の病原体カードだけが交換候補
+function onTimerOk() {
+  const game = AppState.game;
+  if (game.pendingTimerCard) {
+    game.timerPile.push(game.pendingTimerCard);
+    game.pendingTimerCard = null;
+  }
+  closeModal(false);
+  runInfectionPhase();
+}
+
 function isResearchCandidate(game, x, y) {
-  if (game.phase !== 'RESEARCH' || game.researchExchangeDone) return false;
-  if (game.uiSelection.kind !== 'HAND_CARD') return false;
+  if (game.phase !== 'RESEARCH' || game.researchExchangeDone || game.uiSelection.kind !== 'HAND_CARD') return false;
   const handCard = game.hand[game.uiSelection.value];
   if (!handCard) return false;
   const slot = getCardSlotAt(game, x, y);
   return slot.faceUp && slot.card.suit === handCard.suit;
 }
 
-// 13-2⑤：手札カードと病原体カードを交換
 function swapResearchCard(game, handIndex, x, y) {
-  const handCard = game.hand[handIndex];
-  const slot = getCardSlotAt(game, x, y);
-  const removedCard = slot.card;
-  slot.card = handCard;
-  slot.faceUp = true;
-  game.hand[handIndex] = removedCard;
-  game.uiSelection = { kind: null, value: null };
-  game.researchExchangeDone = true; // 研究フェーズで交換できるのは1回のみ
+  animateSwapCards(handIndex, x, y, () => {
+    const handCard = game.hand[handIndex], slot = getCardSlotAt(game, x, y);
+    const removedCard = slot.card;
+    slot.card = handCard; slot.faceUp = true;
+    game.hand[handIndex] = removedCard;
+    game.uiSelection = { kind: null, value: null };
+    game.researchExchangeDone = true;
+    updateOutbreakStatus();
+    renderBoard(); renderHand();
+  });
 }
 
-// 14章 / 27章④：共通の選択ルール（再タップで解除／別対象タップで切替／無関係タップで解除）
 function onHandCardClick(index) {
   const game = AppState.game;
   if (game.phase !== 'RESEARCH' || game.researchExchangeDone) return;
-  if (game.uiSelection.kind === 'HAND_CARD' && game.uiSelection.value === index) {
-    game.uiSelection = { kind: null, value: null };
-  } else {
-    game.uiSelection = { kind: 'HAND_CARD', value: index };
-  }
-  renderBoard();
-  renderHand();
+  playPipSE();
+  game.uiSelection = (game.uiSelection.kind === 'HAND_CARD' && game.uiSelection.value === index) ? { kind: null, value: null } : { kind: 'HAND_CARD', value: index };
+  renderBoard(); renderHand(); renderDiceTray();
 }
 
 function onBoardCellClick(x, y) {
   const game = AppState.game;
-
-  // --- 研究フェーズ：手札選択中に病原体カードをタップ→交換。成立したら自動で治療フェーズへ ---
   if (game.phase === 'RESEARCH' && !game.researchExchangeDone && game.uiSelection.kind === 'HAND_CARD') {
     if (isResearchCandidate(game, x, y)) {
       swapResearchCard(game, game.uiSelection.value, x, y);
-      renderBoard();
-      renderHand();
-      runMoveTreatPhase(); // 13-1：交換成立で自動的に治療フェーズへ
     } else {
-      game.uiSelection = { kind: null, value: null }; // 無関係なタップ→選択解除
-      renderBoard();
-      renderHand();
+      game.uiSelection = { kind: null, value: null };
+      renderBoard(); renderHand();
     }
     return;
   }
-
-  // --- 治療フェーズ：移動ダイス選択中に盤面をタップ→移動可否判定 ---
-  if (game.phase === 'MOVE_TREAT' && game.uiSelection.kind === 'MOVE_DIE') {
-    onMoveDieTargetClick(x, y);
+  if (game.phase === 'RESEARCH' && game.uiSelection.kind === 'MOVE_DIE') {
+    if (isMoveCandidate(game, x, y)) {
+      playSwooshSE();
+      onMoveDieTargetClick(x, y);
+    } else {
+      game.uiSelection = { kind: null, value: null };
+      renderBoard(); renderDiceTray();
+    }
     return;
   }
-
-  // --- 治療フェーズ：ダイス未選択時、医療班の現在地セルをタップ→治療モーダルを開く ---
-  if (game.phase === 'MOVE_TREAT' && game.team.x === x && game.team.y === y) {
+  if (game.phase === 'RESEARCH' && game.team.x === x && game.team.y === y) {
+    playPipSE();
     openTreatModal();
-    return;
   }
 }
 
-/* ============================================================================
-   治療フェーズ｜移動（8章 / 17-3）
-============================================================================ */
 function runMoveTreatPhase() {
-  const game = AppState.game;
-  game.phase = 'MOVE_TREAT';
-  game.uiSelection = { kind: null, value: null };
-  openDiceRollModal('TREAT', 3, '治療フェーズ');
+  AppState.game.phase = 'RESEARCH';
+  AppState.game.uiSelection = { kind: null, value: null };
+  openDiceRollModal('TREAT', 3, '行動ダイス');
 }
 
-// ダイス確定後（confirmDiceRollのpurpose==='TREAT'から呼ばれる）
 function beginMoveTreatDice(values) {
-  const game = AppState.game;
-  game.dice = values.map((v, i) => ({ id: i, value: v, used: false }));
+  AppState.game.dice = values.map((v, i) => ({ id: i, value: v, used: false }));
 }
 
-// 選択中のダイスの出目から、現在地を起点にした移動可能マスかどうかを判定（8章のMOVE_OFFSETSを参照）
 function isMoveCandidate(game, x, y) {
-  if (game.phase !== 'MOVE_TREAT' || game.uiSelection.kind !== 'MOVE_DIE') return false;
+  if (game.phase !== 'RESEARCH' || game.uiSelection.kind !== 'MOVE_DIE') return false;
   const die = game.dice.find(d => d.id === game.uiSelection.value);
   if (!die || die.used) return false;
-  const dx = x - game.team.x, dy = y - game.team.y;
-  return MOVE_OFFSETS[die.value].some(o => o.dx === dx && o.dy === dy);
+  return MOVE_OFFSETS[die.value].some(o => o.dx === (x - game.team.x) && o.dy === (y - game.team.y));
 }
 
 function onTrayDieClick(dieId) {
   const game = AppState.game;
-  if (game.phase !== 'MOVE_TREAT') return;
+  if (game.phase !== 'RESEARCH') return;
   const die = game.dice.find(d => d.id === dieId);
   if (!die || die.used) return;
-  if (game.uiSelection.kind === 'MOVE_DIE' && game.uiSelection.value === dieId) {
-    game.uiSelection = { kind: null, value: null }; // 再タップで解除
-  } else {
-    game.uiSelection = { kind: 'MOVE_DIE', value: dieId }; // 選択 or 切替
-  }
-  renderBoard();
-  renderDiceTray();
+  playPipSE();
+  game.uiSelection = (game.uiSelection.kind === 'MOVE_DIE' && game.uiSelection.value === dieId) ? { kind: null, value: null } : { kind: 'MOVE_DIE', value: dieId };
+  renderBoard(); renderHand(); renderDiceTray();
 }
 
 function onMoveDieTargetClick(x, y) {
   const game = AppState.game;
   if (isMoveCandidate(game, x, y)) {
-    const die = game.dice.find(d => d.id === game.uiSelection.value);
-    die.used = true;
+    game.dice.find(d => d.id === game.uiSelection.value).used = true;
     game.team = { x, y };
-    game.uiSelection = { kind: null, value: null };
-  } else {
-    game.uiSelection = { kind: null, value: null }; // 無関係なタップ→選択解除
   }
-  renderBoard();
-  renderDiceTray();
+  game.uiSelection = { kind: null, value: null };
+  renderBoard(); renderDiceTray();
 }
 
-/* ============================================================================
-   治療フェーズ｜治療（17-4 / 27章②）
-============================================================================ */
-function isCurrentCellCured(game) {
-  const slot = getCardSlotAt(game, game.team.x, game.team.y);
-  return !slot.faceUp;
-}
+function isCurrentCellCured(game) { return !getCardSlotAt(game, game.team.x, game.team.y).faceUp; }
+function isAreaFullyCured(area) { return area.cards.every(slot => !slot.faceUp); }
+function checkWin(game) { return SUITS.filter(suit => isAreaFullyCured(game.areas[suit])).length >= DIFFICULTY_CLEAR_AREAS[game.difficulty]; }
+function resultSubtext(game) { return `${game.difficulty} ／ ${SUITS.filter(suit => isAreaFullyCured(game.areas[suit])).length}エリア完治`; }
 
-function isAreaFullyCured(area) {
-  return area.cards.every(slot => !slot.faceUp);
-}
+function triggerLose(game) { playGameOverSE(); AppState.screen = 'RESULT'; AppState.resultType = 'LOSE'; AppState.popup = null; render(); }
 
-// 26-2：勝利判定
-function checkWin(game) {
-  const curedCount = SUITS.filter(suit => isAreaFullyCured(game.areas[suit])).length;
-  return curedCount >= DIFFICULTY_CLEAR_AREAS[game.difficulty];
-}
-
-function resultSubtext(game) {
-  const curedCount = SUITS.filter(suit => isAreaFullyCured(game.areas[suit])).length;
-  return `${game.difficulty} ／ ${curedCount}エリア完治`;
-}
-
-// 20章：敗北（アウトブレイク）
-function triggerLose(game) {
-  AppState.screen = 'RESULT';
-  AppState.resultType = 'LOSE';
-  AppState.popup = null;
-  render();
-}
-
-// 26章：勝利（クリア）
 function triggerWin(game) {
-  AppState.screen = 'RESULT';
-  AppState.resultType = 'WIN';
+  playWinFanfareSE();
+  const curedSuits = SUITS.filter(suit => isAreaFullyCured(game.areas[suit]));
   AppState.popup = null;
+  AppState.winSuits = curedSuits;
   render();
+  setTimeout(() => {
+    AppState.winSuits = [];
+    AppState.screen = 'RESULT';
+    AppState.resultType = 'WIN';
+    render();
+  }, 1000);
 }
 
 function openTreatModal() {
   const game = AppState.game;
-  game.treatModal = {
-    mode: isCurrentCellCured(game) ? 'ALREADY_CURED' : 'SELECT_DICE', // 27章②：治療済みの位置ならダイスの代わりに専用表示
-    selectedDieIds: [],
-    result: 'NONE', // 'NONE' | 'FAIL'
-  };
-  AppState.popup = 'TREAT';
-  render();
+  game.treatModal = { mode: isCurrentCellCured(game) ? 'ALREADY_CURED' : 'SELECT_DICE', selectedDieIds: [], result: 'NONE' };
+  AppState.popup = 'TREAT'; render();
 }
 
-function closeTreatModal() {
-  AppState.game.treatModal = null;
-  AppState.popup = null;
-  render();
-}
+function closeTreatModal() { AppState.game.treatModal = null; AppState.popup = null; render(); }
 
 function onTreatDieToggle(dieId) {
+  playPipSE();
   const modal = AppState.game.treatModal;
   const idx = modal.selectedDieIds.indexOf(dieId);
-  if (idx === -1) modal.selectedDieIds.push(dieId);
-  else modal.selectedDieIds.splice(idx, 1);
-  modal.result = 'NONE'; // 選び直したら失敗表示はクリア
-  renderTreatModal();
+  if (idx === -1) modal.selectedDieIds.push(dieId); else modal.selectedDieIds.splice(idx, 1);
+  modal.result = 'NONE'; renderTreatModal();
 }
 
-// 17-4④⑤：選択中ダイスの合計 ≥ 現在地カードのランクなら治療成功
 function onTreatAttempt() {
-  const game = AppState.game;
-  const modal = game.treatModal;
+  const game = AppState.game, modal = game.treatModal;
   if (modal.selectedDieIds.length === 0) return;
-
   const sum = modal.selectedDieIds.reduce((s, id) => s + game.dice.find(d => d.id === id).value, 0);
   const slot = getCardSlotAt(game, game.team.x, game.team.y);
-  const need = rankValue(slot.card.rank);
-
-  if (sum >= need) {
-    slot.faceUp = false; // 治療成功：カードを裏返す
-    modal.selectedDieIds.forEach(id => { game.dice.find(d => d.id === id).used = true; }); // ダイス消費
-    game.treatModal = null;
-    AppState.popup = null;
-    render();
+  if (sum >= rankValue(slot.card.rank)) {
+    playCureSuccessSE();
+    slot.faceUp = false; updateOutbreakStatus();
+    modal.selectedDieIds.forEach(id => { game.dice.find(d => d.id === id).used = true; });
+    game.treatModal = null; AppState.popup = null; render();
     if (checkWin(game)) triggerWin(game);
   } else {
-    // 17-4⑤-b確定：治療失敗時、ダイスは消費しない。選択解除して失敗表示のみ行う
-    modal.selectedDieIds = [];
-    modal.result = 'FAIL';
-    renderTreatModal();
+    playBuzzerSE();
+    modal.selectedDieIds = []; modal.result = 'FAIL'; renderTreatModal();
   }
 }
 
-/* ============================================================================
-   支払フェーズ（18-1 / 22-1）
-============================================================================ */
-function checkAnyOutbreak(game) {
-  return SUITS.some(suit => checkOutbreak(game.areas[suit]));
-}
+function checkAnyOutbreak(game) { return SUITS.some(suit => checkOutbreak(game.areas[suit])); }
 
 function runPaymentPhase() {
   const game = AppState.game;
-  // 18-1②：支払フェーズへ進む直前にアウトブレイク判定。該当すれば支払わせずゲームオーバーへ
-  if (checkAnyOutbreak(game)) {
-    triggerLose(game);
-    return;
-  }
-  game.phase = 'PAYMENT'; // ここでMOVE_TREAT専用のダイストレイ表示は自動的に隠れ、手札表示に戻る
-  game.uiSelection = { kind: null, value: null };
-  AppState.popup = 'PAYMENT_DISCARD';
-  render();
+  game.phase = 'PAYMENT'; game.uiSelection = { kind: null, value: null };
+  AppState.popup = 'PAYMENT_DISCARD'; render();
 }
 
-// ×タップ：支払わずにキャンセルし、治療フェーズ（ダイストレイ表示）へ戻す
-function closePaymentModal() {
-  const game = AppState.game;
-  game.phase = 'MOVE_TREAT';
-  game.uiSelection = { kind: null, value: null };
-  AppState.popup = null;
-  render();
-}
+function closePaymentModal() { AppState.game.phase = 'RESEARCH'; AppState.game.uiSelection = { kind: null, value: null }; AppState.popup = null; render(); }
 
 function onPaymentCardToggle(index) {
+  playPipSE();
   const game = AppState.game;
-  if (game.uiSelection.kind === 'PAYMENT_CARD' && game.uiSelection.value === index) {
-    game.uiSelection = { kind: null, value: null }; // 再タップで解除
-  } else {
-    game.uiSelection = { kind: 'PAYMENT_CARD', value: index }; // 選択 or 切替
-  }
+  game.uiSelection = (game.uiSelection.kind === 'PAYMENT_CARD' && game.uiSelection.value === index) ? { kind: null, value: null } : { kind: 'PAYMENT_CARD', value: index };
   renderPaymentModal();
 }
 
 function onPaymentSubmit() {
   const game = AppState.game;
-  if (game.uiSelection.kind !== 'PAYMENT_CARD') return; // 未選択なら何もしない
-  const idx = game.uiSelection.value;
-  const [discarded] = game.hand.splice(idx, 1);
-  game.discard.push(discarded);
+  if (game.uiSelection.kind !== 'PAYMENT_CARD') return;
+  playCoinSE();
+  game.discard.push(game.hand.splice(game.uiSelection.value, 1)[0]);
   game.uiSelection = { kind: null, value: null };
-  AppState.popup = null;
-  render();
-  runInfectionPhase(); // 支払い完了で次ターンの感染フェーズへ自動遷移
+
+  const failedSuits = SUITS.filter(suit => checkOutbreak(game.areas[suit]));
+  if (failedSuits.length > 0) {
+    AppState.popup = null;
+    AppState.outbreakSuits = failedSuits;
+    render();
+    setTimeout(() => {
+      AppState.outbreakSuits = [];
+      triggerLose(game);
+    }, 1000);
+  } else {
+    AppState.popup = null;
+    render();
+    if (game.difficulty === 'MASTER') {
+      runTimerPhase();
+    } else {
+      runInfectionPhase();
+    }
+  }
 }
 
-/* ============================================================================
-   カード描画（10-3改訂：背景/枠線は共通、文字色のみスートで分ける。
-   裏向き(faceUp=false)は文字を一切表示しない）
-============================================================================ */
 function cardHTML(card, faceUp, extraClass, extraAttrs) {
-  extraClass = extraClass || '';
-  extraAttrs = extraAttrs || '';
-  if (!faceUp) {
-    return `<div class="card-cell ${extraClass}" ${extraAttrs}></div>`;
-  }
+  extraClass = extraClass || ''; extraAttrs = extraAttrs || '';
+  if (!faceUp) return `<div class="card-cell ${extraClass}" ${extraAttrs}></div>`;
   return `<div class="card-cell suit-${card.suit} ${extraClass}" ${extraAttrs}><span class="rank">${SUIT_SYMBOL[card.suit]}${card.rank}</span></div>`;
 }
 
-/* ============================================================================
-   ゲーム画面の描画
-============================================================================ */
 function renderStats() {
-  const game = AppState.game;
-  document.getElementById('deckCount').textContent = game.deck.length;
-  document.getElementById('discardCount').textContent = game.discard.length;
+  document.getElementById('deckCount').textContent = AppState.game.deck.length;
+  document.getElementById('discardCount').textContent = AppState.game.discard.length;
+  const timerContainer = document.getElementById('timerContainer');
+  if (AppState.game.difficulty === 'MASTER') {
+    timerContainer.hidden = false;
+    document.getElementById('timerBtn').textContent = AppState.game.timerPile.length;
+  } else {
+    timerContainer.hidden = true;
+  }
 }
 
 function renderBoard() {
-  const game = AppState.game;
-  const grid = document.getElementById('boardGrid');
+  const game = AppState.game, grid = document.getElementById('boardGrid');
   let html = '';
   for (let y = 0; y < 4; y++) {
     for (let x = 0; x < 4; x++) {
-      const slot = getCardSlotAt(game, x, y);
-      const isTeam = game.team && game.team.x === x && game.team.y === y;
+      const slot = getCardSlotAt(game, x, y), isTeam = game.team && game.team.x === x && game.team.y === y;
+      const suit = suitForCell(x, y);
+      const isOutbreakTarget = slot.faceUp && AppState.outbreakSuits.includes(suit);
+      const isWinTarget = AppState.winSuits.includes(suit);
       const classes = [
-        isTeam ? 'is-team' : '',
-        isResearchCandidate(game, x, y) ? 'mark-research' : '',
-        isMoveCandidate(game, x, y) ? 'mark-move' : '',
+        isTeam ? 'is-team' : '', (isTeam && AppState.isBlinkingTeam) ? 'is-blinking' : '',
+        isOutbreakTarget ? 'is-outbreak-target is-blinking' : '',
+        isWinTarget ? 'is-win-target is-blinking' : '',
+        isResearchCandidate(game, x, y) ? 'mark-research' : '', isMoveCandidate(game, x, y) ? 'mark-move' : '',
       ].join(' ').trim();
       html += cardHTML(slot.card, slot.faceUp, classes, `data-x="${x}" data-y="${y}"`);
     }
   }
-  grid.innerHTML = html;
+  grid.innerHTML = html; updateOutbreakStatus();
 }
 
 function renderHand() {
-  const game = AppState.game;
-  const handRow = document.getElementById('handRow');
-  // 治療フェーズ中は研究カード(手札)を使わないため非表示にする
-  if (game.phase === 'MOVE_TREAT') {
-    handRow.hidden = true;
-    handRow.innerHTML = '';
-    return;
-  }
+  const game = AppState.game, handRow = document.getElementById('handRow');
   handRow.hidden = false;
-  const html = game.hand.map((c, i) => {
-    const isSelected = game.uiSelection.kind === 'HAND_CARD' && game.uiSelection.value === i;
-    return cardHTML(c, true, isSelected ? 'mark-research' : '', `data-hand-index="${i}"`);
-  }).join('');
-  handRow.innerHTML = html;
+  handRow.innerHTML = game.hand.map((c, i) => cardHTML(c, true, (game.uiSelection.kind === 'HAND_CARD' && game.uiSelection.value === i) ? 'mark-research' : '', `data-hand-index="${i}"`)).join('');
 }
 
-// 治療フェーズ：未使用のダイスをトレイに表示。タップで移動用に選択/解除できる
 function renderDiceTray() {
-  const game = AppState.game;
-  const tray = document.getElementById('diceTray');
-  if (game.phase !== 'MOVE_TREAT' || !game.dice.length) {
-    tray.hidden = true;
-    tray.innerHTML = '';
-    return;
-  }
-  tray.hidden = false;
-  const unused = game.dice.filter(d => !d.used);
-  tray.innerHTML = unused.map(d => {
-    const isSelected = game.uiSelection.kind === 'MOVE_DIE' && game.uiSelection.value === d.id;
-    return `<div class="die${isSelected ? ' mark-move' : ''}" data-die-id="${d.id}">${diePipsHTML(d.value)}</div>`;
-  }).join('');
+  const game = AppState.game, tray = document.getElementById('diceTray');
+  const unused = (game.dice || []).filter(d => !d.used);
+  if (game.phase === 'INFECTION' || game.phase === 'PAYMENT' || game.phase === 'TIMER' || !unused.length) { tray.innerHTML = ''; return; }
+  tray.innerHTML = unused.map(d => `<div class="die${(game.uiSelection.kind === 'MOVE_DIE' && game.uiSelection.value === d.id) ? ' mark-move' : ''}" data-die-id="${d.id}">${diePipsHTML(d.value)}</div>`).join('');
 }
 
-const PHASE_BUTTON = {
-  INFECTION:  { label: '感染フェーズ', enabled: false },
-  RESEARCH:   { label: '治療フェーズ', enabled: true },  // 交換せずスキップする場合の手動遷移
-  MOVE_TREAT: { label: '支払フェーズ', enabled: true },  // ダイスを使い切っていなくても支払フェーズへ進める
-  PAYMENT:    { label: '感染フェーズ', enabled: false }, // モーダル表示中は常時こちらの状態（ボタンは実質見えない）
-};
 function renderPhaseBar() {
-  const game = AppState.game;
-  const cfg = PHASE_BUTTON[game.phase];
   const btn = document.getElementById('phaseBtn');
-  btn.textContent = cfg.label;
-  btn.disabled = !cfg.enabled;
+  btn.textContent = '支払いフェーズ';
+  btn.disabled = AppState.game.phase !== 'RESEARCH';
 }
 
-/* ============================================================================
-   ダイスロール 共通モーダル（23章）
-   purpose: 'SETUP_POSITION' | 'TREAT' | 'REINFECT'（TREAT/REINFECTは以降のステップで使用）
-   status: 'ROLLING' -> 0.25秒ごとに全ダイス独立して値/傾きを更新
-           'STOPPED' -> ストップ時に値を新規に振り直し、傾きは0degへ固定
-============================================================================ */
-let diceIntervalIds = [];
+/* ダイス制御 */
+let diceTimerId = null;
 
 function openDiceRollModal(purpose, diceCount, title) {
   AppState.game.diceRollModal = {
-    purpose,
-    title,
-    status: 'ROLLING',
+    purpose, title, status: 'ROLLING',
     dice: Array.from({ length: diceCount }, () => ({ value: randInt(1, 6), rotation: 0 })),
   };
   AppState.popup = 'DICE_ROLL';
   render();
 
-  diceIntervalIds = AppState.game.diceRollModal.dice.map((_, i) => setInterval(() => {
-    AppState.game.diceRollModal.dice[i] = {
-      value: randInt(1, 6),
-      rotation: [-45, 0, 45][randInt(0, 2)],
-    };
-    renderDiceModal();
-  }, 250));
+  if (diceTimerId) clearInterval(diceTimerId);
+  diceTimerId = setInterval(() => {
+    if (AppState.game && AppState.game.diceRollModal && AppState.game.diceRollModal.status === 'ROLLING') {
+      AppState.game.diceRollModal.dice = AppState.game.diceRollModal.dice.map(() => ({
+        value: randInt(1, 6),
+        rotation: [-45, 0, 45][randInt(0, 2)],
+      }));
+      renderDiceModalDOMOnly();
+    }
+  }, 250);
 }
 
 function stopDiceRoll() {
-  diceIntervalIds.forEach(id => clearInterval(id));
-  diceIntervalIds = [];
+  if (diceTimerId) { clearInterval(diceTimerId); diceTimerId = null; }
   const modal = AppState.game.diceRollModal;
-  // アニメーション中の値は使わず、あらためて振り直す。傾きは0degに固定（目押し防止）
   modal.dice = modal.dice.map(() => ({ value: randInt(1, 6), rotation: 0 }));
   modal.status = 'STOPPED';
+  playDiceRollSE();
   renderDiceModal();
 }
 
 function confirmDiceRoll() {
-  const modal = AppState.game.diceRollModal;
-  const values = modal.dice.map(d => d.value);
-  const purpose = modal.purpose;
+  const modal = AppState.game.diceRollModal, values = modal.dice.map(d => d.value), purpose = modal.purpose;
 
-  AppState.popup = null;
-  AppState.game.diceRollModal = null;
+  if (purpose === 'SETUP_POSITION' || purpose === 'TREAT') {
+    playPipSE();
+  }
+
+  AppState.popup = null; AppState.game.diceRollModal = null;
 
   if (purpose === 'SETUP_POSITION') {
     AppState.game.team = resolveSetupPosition(values);
-    runInfectionPhase(); // 医療班の位置が決まったら、最初の感染フェーズを自動開始
+    AppState.isBlinkingTeam = true; render();
+    setTimeout(() => { AppState.isBlinkingTeam = false; renderBoard(); runInfectionPhase(); }, 1000);
     return;
   }
   if (purpose === 'REINFECT') {
     applyReinfect(AppState.game, AppState.game.pendingReinfectSuit, values[0]);
-    AppState.game.pendingReinfectSuit = null;
-    runResearchPhase(); // 再感染判定が終わったら研究フェーズへ自動遷移
+    AppState.game.pendingReinfectSuit = null; runResearchPhase();
     return;
   }
-  if (purpose === 'TREAT') {
-    beginMoveTreatDice(values); // ダイス3個を確定させ、以降は盤面下部のトレイから移動/治療に使う
-    render();
-    return;
-  }
-
-  render();
+  if (purpose === 'TREAT') { beginMoveTreatDice(values); render(); }
 }
 
-const DIE_PIP_LAYOUT = {
-  1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8],
-};
+const DIE_PIP_LAYOUT = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
 function diePipsHTML(value) {
-  const pips = DIE_PIP_LAYOUT[value];
-  let dots = '';
+  const pips = DIE_PIP_LAYOUT[value]; let dots = '';
   for (let i = 0; i < 9; i++) dots += pips.includes(i) ? '<i class="on"></i>' : '<i></i>';
   return dots;
 }
 function dieHTML(value, rotation) {
-  // rotation=0（停止後）はクラス自体を付けない。-45/45のときだけ傾きクラスを付与する
-  const tiltClass = rotation === -45 ? ' tilt-l' : rotation === 45 ? ' tilt-r' : '';
-  return `<div class="die${tiltClass}">${diePipsHTML(value)}</div>`;
+  return `<div class="die${rotation === -45 ? ' tilt-l' : rotation === 45 ? ' tilt-r' : ''}">${diePipsHTML(value)}</div>`;
 }
 
 function renderDiceModal() {
-  const modal = AppState.game.diceRollModal;
-  const panel = document.getElementById('modalPanel');
-  const btnLabel = modal.status === 'ROLLING' ? 'ストップ' : 'OK';
+  const modal = AppState.game.diceRollModal, panel = document.getElementById('modalPanel');
   panel.innerHTML = `
     <h3 class="modal-title">${modal.title}</h3>
-    <div class="dice-row">${modal.dice.map(d => dieHTML(d.value, d.rotation)).join('')}</div>
-    <div class="modal-actions"><button class="btn-outline primary" id="diceActionBtn">${btnLabel}</button></div>
+    <div class="dice-row" id="diceModalRow">${modal.dice.map(d => dieHTML(d.value, d.rotation)).join('')}</div>
+    <div class="modal-actions"><button class="btn-outline primary" id="diceActionBtn">${modal.status === 'ROLLING' ? 'ストップ' : 'OK'}</button></div>
   `;
-  document.getElementById('diceActionBtn').addEventListener('click', () => {
-    if (modal.status === 'ROLLING') stopDiceRoll();
-    else confirmDiceRoll();
-  });
 }
 
-/* ============================================================================
-   感染カード ドローモーダル（12-4 / 25-1）
-============================================================================ */
+function renderDiceModalDOMOnly() {
+  const row = document.getElementById('diceModalRow');
+  if (row && AppState.game && AppState.game.diceRollModal) {
+    row.innerHTML = AppState.game.diceRollModal.dice.map(d => dieHTML(d.value, d.rotation)).join('');
+  }
+}
+
 function renderInfectionModal() {
-  const game = AppState.game;
-  const card = game.pendingInfectionCard;
-  const panel = document.getElementById('modalPanel');
-  panel.innerHTML = `
+  document.getElementById('modalPanel').innerHTML = `
     <h3 class="modal-title">感染カード</h3>
-    <div class="draw-card-wrap">${cardHTML(card, true, 'draw-card')}</div>
+    <div class="draw-card-wrap">${cardHTML(AppState.game.pendingInfectionCard, true, 'draw-card', 'id="infectionDrawCard"')}</div>
     <div class="modal-actions"><button class="btn-outline primary" id="infectionOkBtn">OK</button></div>
   `;
-  document.getElementById('infectionOkBtn').addEventListener('click', onInfectionOk);
 }
 
-/* ============================================================================
-   研究カード ドローモーダル（13-5）
-============================================================================ */
 function renderResearchModal() {
-  const game = AppState.game;
-  const card = game.pendingResearchCard;
-  const panel = document.getElementById('modalPanel');
-  panel.innerHTML = `
+  document.getElementById('modalPanel').innerHTML = `
     <h3 class="modal-title">研究カード</h3>
-    <div class="draw-card-wrap">${cardHTML(card, true, 'draw-card')}</div>
+    <div class="draw-card-wrap">${cardHTML(AppState.game.pendingResearchCard, true, 'draw-card', 'id="researchDrawCard"')}</div>
     <div class="modal-actions"><button class="btn-outline primary" id="researchOkBtn">OK</button></div>
   `;
-  document.getElementById('researchOkBtn').addEventListener('click', onResearchOk);
 }
 
-/* ============================================================================
-   治療モーダル（17-4 / 17-5 / 27章②）
-============================================================================ */
-function renderTreatModal() {
-  const game = AppState.game;
-  const modal = game.treatModal;
-  const panel = document.getElementById('modalPanel');
+function renderTimerModal() {
+  document.getElementById('modalPanel').innerHTML = `
+    <h3 class="modal-title">時限カード</h3>
+    <div class="draw-card-wrap">${cardHTML(AppState.game.pendingTimerCard, true, 'draw-card', 'id="timerDrawCard"')}</div>
+    <div class="modal-actions"><button class="btn-outline danger" id="timerOkBtn">OK</button></div>
+  `;
+}
 
+function renderTreatModal() {
+  const game = AppState.game, modal = game.treatModal, panel = document.getElementById('modalPanel');
   if (modal.mode === 'ALREADY_CURED') {
-    panel.innerHTML = `
-      <button class="modal-close" id="treatCloseBtn">×</button>
-      <h3 class="modal-title">治療</h3>
-      <p class="treat-cured-text">治療済み</p>
-    `;
-    document.getElementById('treatCloseBtn').addEventListener('click', closeTreatModal);
+    panel.innerHTML = `<button class="modal-close" id="treatCloseBtn">×</button><h3 class="modal-title">治療</h3><p class="treat-cured-text">治療済み</p>`;
     return;
   }
-
   const unused = game.dice.filter(d => !d.used);
   panel.innerHTML = `
     <button class="modal-close" id="treatCloseBtn">×</button>
     <h3 class="modal-title">治療</h3>
     <div class="dice-row">
-      ${unused.map(d => {
-        const selected = modal.selectedDieIds.includes(d.id);
-        return `<div class="die${selected ? ' mark-treat' : ''}" data-treat-die-id="${d.id}">${diePipsHTML(d.value)}</div>`;
-      }).join('')}
+      ${unused.map(d => `<div class="die${modal.selectedDieIds.includes(d.id) ? ' mark-treat' : ''}" data-treat-die-id="${d.id}">${diePipsHTML(d.value)}</div>`).join('')}
     </div>
-    ${modal.result === 'FAIL' ? '<p class="treat-fail-text">治療失敗</p>' : ''}
+    <p class="treat-fail-text ${modal.result === 'FAIL' ? 'is-visible' : ''}">治療失敗</p>
     <div class="modal-actions"><button class="btn-outline primary" id="treatAttemptBtn">治療</button></div>
   `;
-  document.getElementById('treatCloseBtn').addEventListener('click', closeTreatModal);
-  document.getElementById('treatAttemptBtn').addEventListener('click', onTreatAttempt);
-  panel.querySelectorAll('[data-treat-die-id]').forEach(el => {
-    el.addEventListener('click', () => onTreatDieToggle(parseInt(el.dataset.treatDieId, 10)));
-  });
 }
 
-/* ============================================================================
-   支払モーダル（18-1 / 22-1）
-============================================================================ */
 function renderPaymentModal() {
-  const game = AppState.game;
-  const sel = game.uiSelection;
-  const panel = document.getElementById('modalPanel');
+  const game = AppState.game, panel = document.getElementById('modalPanel');
   panel.innerHTML = `
     <button class="modal-close" id="paymentCloseBtn">×</button>
     <h3 class="modal-title">提出カード</h3>
     <div class="payment-hand-row">
-      ${game.hand.map((c, i) => {
-        const isSelected = sel.kind === 'PAYMENT_CARD' && sel.value === i;
-        return cardHTML(c, true, isSelected ? 'mark-payment' : '', `data-payment-index="${i}"`);
-      }).join('')}
+      ${game.hand.map((c, i) => cardHTML(c, true, (game.uiSelection.kind === 'PAYMENT_CARD' && game.uiSelection.value === i) ? 'mark-payment' : '', `data-payment-index="${i}"`)).join('')}
     </div>
     <div class="modal-actions"><button class="btn-outline primary" id="paymentSubmitBtn">支払</button></div>
   `;
-  document.getElementById('paymentCloseBtn').addEventListener('click', closePaymentModal);
-  document.getElementById('paymentSubmitBtn').addEventListener('click', onPaymentSubmit);
-  panel.querySelectorAll('[data-payment-index]').forEach(el => {
-    el.addEventListener('click', () => onPaymentCardToggle(parseInt(el.dataset.paymentIndex, 10)));
-  });
 }
 
-/* ============================================================================
-   RESULT 画面（20章 / 26章）
-============================================================================ */
-function renderResultScreen() {
+function renderDiscardModal() {
   const game = AppState.game;
-  const section = document.getElementById('screen-result');
-  const isWin = AppState.resultType === 'WIN';
+  const panel = document.getElementById('modalPanel');
+  if (!game || game.discard.length === 0) {
+    panel.innerHTML = `
+      <button class="modal-close" id="closeDiscardBtn">×</button>
+      <h3 class="modal-title">捨て札一覧</h3>
+      <div class="discard-empty">捨て札はありません</div>
+    `;
+    return;
+  }
 
-  section.classList.toggle('win', isWin);
-  section.classList.toggle('lose', !isWin);
+  const sortedDiscard = game.discard.slice().sort((a, b) => {
+    const suitOrder = { S: 0, D: 1, C: 2, H: 3 };
+    if (suitOrder[a.suit] !== suitOrder[b.suit]) {
+      return suitOrder[a.suit] - suitOrder[b.suit];
+    }
+    return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
+  });
 
-  document.getElementById('resultTitle').textContent = isWin ? '制圧完了' : 'アウトブレイク';
-  document.getElementById('resultSub').textContent = game ? resultSubtext(game) : '';
+  const cardsHtml = sortedDiscard.map(c => cardHTML(c, true, 'mini-card')).join('');
+
+  panel.innerHTML = `
+    <button class="modal-close" id="closeDiscardBtn">×</button>
+    <h3 class="modal-title">捨て札一覧 (${sortedDiscard.length}枚)</h3>
+    <div class="discard-grid">${cardsHtml}</div>
+  `;
 }
 
-/* ============================================================================
-   RENDER（画面出し分け）
-============================================================================ */
+function renderTimerListModal() {
+  const game = AppState.game;
+  const panel = document.getElementById('modalPanel');
+  if (!game || game.timerPile.length === 0) {
+    panel.innerHTML = `
+      <button class="modal-close" id="closeTimerListBtn">×</button>
+      <h3 class="modal-title">時限一覧</h3>
+      <div class="discard-empty">時限の山のカードはありません</div>
+    `;
+    return;
+  }
+
+  const sortedTimer = game.timerPile.slice().sort((a, b) => {
+    const suitOrder = { S: 0, D: 1, C: 2, H: 3 };
+    if (suitOrder[a.suit] !== suitOrder[b.suit]) {
+      return suitOrder[a.suit] - suitOrder[b.suit];
+    }
+    return RANKS.indexOf(a.rank) - RANKS.indexOf(b.rank);
+  });
+
+  const cardsHtml = sortedTimer.map(c => cardHTML(c, true, 'mini-card')).join('');
+
+  panel.innerHTML = `
+    <button class="modal-close" id="closeTimerListBtn">×</button>
+    <h3 class="modal-title">時限一覧 (${sortedTimer.length}枚)</h3>
+    <div class="discard-grid">${cardsHtml}</div>
+  `;
+}
+
+function renderGameMenuModal() {
+  document.getElementById('modalPanel').innerHTML = `
+    <button class="modal-close" id="closeGameMenuBtn">×</button>
+    <h3 class="modal-title">メニュー</h3>
+    <div class="game-menu-col">
+      <button class="btn-outline primary" id="menuRulesBtn">ルール</button>
+      <button class="btn-outline danger" id="quitGameBtn">ゲームをやめる</button>
+    </div>
+  `;
+}
+
+function renderResultScreen() {
+  const isWin = AppState.resultType === 'WIN', section = document.getElementById('screen-result');
+  section.classList.toggle('win', isWin); section.classList.toggle('lose', !isWin);
+  document.getElementById('resultTitle').textContent = isWin ? '制圧完了' : 'アウトブレイク';
+  document.getElementById('resultSub').textContent = AppState.game ? resultSubtext(AppState.game) : '';
+}
+
 function render() {
   document.getElementById('screen-home').hidden = AppState.screen !== 'HOME';
   document.getElementById('screen-game').hidden = AppState.screen !== 'PLAYING';
   document.getElementById('screen-result').hidden = AppState.screen !== 'RESULT';
-
   document.getElementById('diffLabel').textContent = AppState.selectedDifficulty;
   document.getElementById('debugBadge').hidden = !DEBUG_MODE;
 
   if (AppState.screen === 'PLAYING' && AppState.game) {
-    renderStats();
-    renderBoard();
-    renderHand();
-    renderDiceTray();
-    renderPhaseBar();
+    document.getElementById('gameHeaderMode').textContent = `[${AppState.game.difficulty}]`;
+    renderStats(); renderBoard(); renderHand(); renderDiceTray(); renderPhaseBar();
+  }
+  if (AppState.screen === 'RESULT') renderResultScreen();
+
+  const overlay = document.getElementById('modalOverlay'), panel = document.getElementById('modalPanel');
+  overlay.hidden = AppState.popup === null;
+  if (AppState.popup === null) { overlay.classList.remove('animating'); panel.classList.remove('animating'); }
+
+  // 時限系のモーダルの場合に赤黒いテーマのクラスを適用
+  if (AppState.popup === 'TIMER_DRAW' || AppState.popup === 'TIMER_LIST') {
+    panel.classList.add('timer-theme');
+  } else {
+    panel.classList.remove('timer-theme');
   }
 
-  if (AppState.screen === 'RESULT') {
-    renderResultScreen();
-  }
-
-  document.getElementById('modalOverlay').hidden = AppState.popup === null;
+  if (AppState.popup === 'GAME_MENU') renderGameMenuModal();
   if (AppState.popup === 'RULES') renderRulesModal();
   if (AppState.popup === 'DICE_ROLL') renderDiceModal();
   if (AppState.popup === 'INFECTION_DRAW') renderInfectionModal();
   if (AppState.popup === 'RESEARCH_DRAW') renderResearchModal();
+  if (AppState.popup === 'TIMER_DRAW') renderTimerModal();
   if (AppState.popup === 'TREAT') renderTreatModal();
   if (AppState.popup === 'PAYMENT_DISCARD') renderPaymentModal();
+  if (AppState.popup === 'DISCARD_LIST') renderDiscardModal();
+  if (AppState.popup === 'TIMER_LIST') renderTimerListModal();
 }
 
-/* ============================================================================
-   RULES MODAL（テキストのみ。サンプル表示・インタラクティブ例は含めない）
-============================================================================ */
 function renderRulesModal() {
-  const panel = document.getElementById('modalPanel');
-  panel.innerHTML = `
-    <button class="modal-close" id="closeRulesBtn">×</button>
-    <h3 class="modal-title">ルール</h3>
-    <div class="rules-body">
-      <h4>概要</h4>
-      <p>4種類の病原体が広がる都市を、医療班として巡回する1人用パンデミックゲームです。感染が広がりきる前に、複数のエリアを完治させることが目的です。</p>
+  document.getElementById('modalPanel').innerHTML = `
+<button class="modal-close" id="closeRulesBtn">×</button>
+<h3 class="modal-title">ルール</h3>
+<div class="rules-body">
+  <h4>概要</h4>
+  <p>4種類の病原体が広がる都市を、医療班として巡回する1人用パンデミックゲームです。感染が広がりきる前に、複数のエリアを完治させることが目的です。</p>
 
-      <h4>トランプの役割</h4>
-      <p>スートは病原体エリアを表します（♠左上 / ♦右上 / ♥左下 / ♣右下）。ランクは感染力を表し、A＝1、2〜10はそのまま、J・Q・Kは10として扱います。</p>
+  <h4>トランプの役割</h4>
+  <p>スートは病原体エリアを表します（♠左上 / ♦右上 / ♥左下 / ♣右下）。ランクは感染力を表し、A＝1、2〜10はそのまま、J・Q・Kは10として扱います。</p>
 
-      <h4>ターンの流れ</h4>
-      <p>「感染フェーズ → 研究フェーズ → 治療フェーズ（移動と治療）→ 支払フェーズ」の順で進み、これを繰り返します。</p>
+  <h4>ターの流れ</h4>
+  <p>「感染フェーズ → 医療班フェーズ（研究・移動・治療）→ 支払フェーズ」の順で進み、これを繰り返します。</p>
 
-      <h4>感染フェーズ</h4>
-      <p>山札から1枚引き、同じスートのエリア内で、引いたカードより低いランクの中から最も低いものと交換します。該当がなければそのまま捨て札にします。エリアが完治済みの場合は、代わりにダイスを1個振り、出た目に応じた位置（1:左上 2:右上 3:左下 4:右下、5・6は何も起きない）が再感染します。</p>
+  <h4>感染フェーズ</h4>
+  <p>山札から1枚引き、同じスートのエリア内で、引いたカードより低いランクの中から最も低いものと交換します。該当がなければそのまま捨て札にします。エリアが完治済みの場合は、代わりにダイスを1個振り、出た目に応じた位置（1:左上 2:右上 3:左下 4:右下、5・6は何も起きない）が再感染します。</p>
 
-      <h4>研究フェーズ</h4>
-      <p>山札から1枚引いて手札に加えます。手札から1枚選び、同じスートの未治療カードと交換できます（交換しなくても構いません）。</p>
+  <h4>医療班フェーズ</h4>
+  <p>最初に山札から1枚引いて手札（研究カード）に加えます。</p>
+  <p>次にダイスを3個振ります。1個ずつ「移動」または「治療」に使うことができます。</p>
+  <p>研究・移動・治療を好きな順番で実行できます。研究は1ターンに1回のみです。移動・治療に使ったダイスは消費されますが、ダイスが残っている限り移動・治療できます。</p>
 
-      <h4>治療フェーズ（移動と治療）</h4>
-      <p>ダイスを3個振ります。1個ずつ「移動」または「治療」に使うことができます。移動は出目以下のマス数だけ上下左右に移動できます（斜め移動不可）。治療は、使用したダイスの合計値が現在地のカードのランク以上であれば成功し、カードは裏向き（治療済み）になります。</p>
+  <h4>研究</h4>
+  <p>研究カードから1枚選び、同じスートの未治療カードと交換できます（交換しなくても構いません）。</p>
 
-      <h4>支払フェーズ</h4>
-      <p>研究維持のため、手札から1枚を選んで捨て札にします。</p>
+  <h4>移動</h4>
+  <p>移動は出目以下のマス数だけ上下左右に移動できます（斜め移動不可）。ダイスを選択すると移動範囲が表示されます。</p>
 
-      <h4>アウトブレイク（敗北条件）</h4>
-      <p>各エリアの未治療カードのランク合計が、「未治療枚数×${OUTBREAK_COEFFICIENT}」を超えると、そのエリアでアウトブレイクが発生し、ゲームオーバーになります。</p>
+  <h4>治療</h4>
+  <p>治療は、医療班の現在位置に対して行います。使用したダイスの合計値が現在地のカードのランク以上であれば成功し、カードは裏向き（治療済み）になります。</p>
+  <p>治療することでアウトブレイクが発生することがあることに注意してください。</p>
 
-      <h4>勝利条件</h4>
-      <table>
-        <thead><tr><th>難易度</th><th>必要な完治エリア数</th></tr></thead>
-        <tbody>
-          <tr><td>EASY</td><td>${DIFFICULTY_CLEAR_AREAS.EASY}</td></tr>
-          <tr><td>NORMAL</td><td>${DIFFICULTY_CLEAR_AREAS.NORMAL}</td></tr>
-          <tr><td>HARD</td><td>${DIFFICULTY_CLEAR_AREAS.HARD}</td></tr>
-        </tbody>
-      </table>
+  <h4>支払フェーズ</h4>
+  <p>研究維持のため、手札から1枚を選んで捨て札にします。</p>
 
-      <h4>山札がなくなった場合</h4>
-      <p>捨て札をシャッフルして新しい山札を作り、そのままゲームを継続します。</p>
-    </div>
-  `;
-  document.getElementById('closeRulesBtn').addEventListener('click', closeModal);
+  <h4>時限フェーズ</h4>
+  <p>MASTERモードではターンの最後に時限モードが発生します。山札の上から1枚、時限の山に捨てます。山札がなくなった場合、時限の山からはカードを復活させられません。感染フェーズ、研究フェーズのドローで山札からカードが引けなくなった場合も敗北となります。</p>
+
+  <h4>アウトブレイク（敗北条件）</h4>
+  <p>エリアごとに未治療カードを確認します。エリア内の未治療カードのランクが全で${OUTBREAK_THRESHOLD}以上の場合、そのエリアでアウトブレイクが発生し、ゲームオーバーになります。</p>
+
+  <h4>勝利条件</h4>
+  <table>
+    <thead><tr><th>難易度</th><th>必要な完治エリア数</th></tr></thead>
+    <tbody>
+      <tr><td>NOVICE</td><td>${DIFFICULTY_CLEAR_AREAS.NOVICE}</td></tr>
+      <tr><td>EASY</td><td>${DIFFICULTY_CLEAR_AREAS.EASY}</td></tr>
+      <tr><td>NORMAL</td><td>${DIFFICULTY_CLEAR_AREAS.NORMAL}</td></tr>
+      <tr><td>HARD</td><td>${DIFFICULTY_CLEAR_AREAS.HARD}</td></tr>
+      <tr><td>MASTER</td><td>${DIFFICULTY_CLEAR_AREAS.MASTER}（時限ルールあり）</td></tr>
+    </tbody>
+  </table>
+
+  <h4>山札がなくなった場合</h4>
+  <p>捨て札をシャッフルして新しい山札を作り、そのままゲームを継続します。ただし、時限の山のカードは山札に戻しません。</p>
+</div>`;
 }
 
-function openModal(kind) {
+function openModal(kind, playSound = true) {
+  if (playSound) playPipSE();
   AppState.popup = kind;
   render();
 }
-function closeModal() {
+
+function closeModal(playSound = true) {
+  if (playSound) playPipSE();
   AppState.popup = null;
   render();
 }
 
-/* ============================================================================
-   ACTIONS（ホーム画面）
-============================================================================ */
+/* イベント処理 */
+document.getElementById('modalPanel').addEventListener('click', (e) => {
+  const target = e.target;
+
+  if (target.id === 'closeGameMenuBtn') { closeModal(false); return; }
+
+  if (target.id === 'menuRulesBtn') { openModal('RULES', true); return; }
+  if (target.id === 'quitGameBtn') {
+    playPipSE();
+    if (diceTimerId) { clearInterval(diceTimerId); diceTimerId = null; }
+    AppState.popup = null;
+    AppState.game = null;
+    AppState.screen = 'HOME';
+    render();
+    return;
+  }
+
+  if (target.id === 'diceActionBtn' || target.closest('#diceActionBtn')) {
+    const modal = AppState.game ? AppState.game.diceRollModal : null;
+    if (modal) {
+      if (modal.status === 'ROLLING') {
+        stopDiceRoll();
+      } else {
+        confirmDiceRoll();
+      }
+    }
+    return;
+  }
+
+  if (target.id === 'infectionOkBtn') { onInfectionOk(); return; }
+  if (target.id === 'researchOkBtn') { onResearchOk(); return; }
+  if (target.id === 'timerOkBtn') { onTimerOk(); return; }
+
+  if (target.id === 'closeRulesBtn' || target.id === 'treatCloseBtn' || target.id === 'closeDiscardBtn' || target.id === 'closeTimerListBtn') { closeModal(false); return; }
+  if (target.id === 'paymentCloseBtn') { closeModal(false); closePaymentModal(); return; }
+
+  if (target.id === 'treatAttemptBtn') { onTreatAttempt(); return; }
+  if (target.id === 'paymentSubmitBtn') { onPaymentSubmit(); return; }
+
+  const treatDie = target.closest('[data-treat-die-id]');
+  if (treatDie) { onTreatDieToggle(parseInt(treatDie.dataset.treatDieId, 10)); return; }
+
+  const payCard = target.closest('[data-payment-index]');
+  if (payCard) { onPaymentCardToggle(parseInt(payCard.dataset.paymentIndex, 10)); return; }
+});
+
 document.getElementById('diffLeft').addEventListener('click', () => {
+  playPipSE();
   AppState.selectedDifficulty = shiftDifficulty(AppState.selectedDifficulty, -1);
   render();
 });
 document.getElementById('diffRight').addEventListener('click', () => {
+  playPipSE();
   AppState.selectedDifficulty = shiftDifficulty(AppState.selectedDifficulty, 1);
   render();
 });
-
 document.getElementById('startBtn').addEventListener('click', () => {
+  getAudioContext();
+  playPipSE();
   AppState.game = setupGame(AppState.selectedDifficulty);
   AppState.screen = 'PLAYING';
   render();
-
-  if (!AppState.game.team) {
-    // 24章：医療班の初期位置をダイス3個で決定（OK後にrunInfectionPhaseへ続く）
-    openDiceRollModal('SETUP_POSITION', 3, '医療班出動');
-  } else {
-    // デバッグでteam固定時はロールを省略し、直接最初の感染フェーズへ
-    runInfectionPhase();
-  }
+  if (!AppState.game.team) openDiceRollModal('SETUP_POSITION', 3, '医療班出動');
+  else runInfectionPhase();
 });
 
-document.getElementById('homeRulesBtn').addEventListener('click', () => openModal('RULES'));
-document.getElementById('gameRulesBtn').addEventListener('click', () => openModal('RULES'));
+document.getElementById('homeRulesBtn').addEventListener('click', () => openModal('RULES', true));
+document.getElementById('gameRulesBtn').addEventListener('click', () => openModal('GAME_MENU', true));
+document.getElementById('discardBtn').addEventListener('click', () => openModal('DISCARD_LIST', true));
+document.getElementById('timerContainer').addEventListener('click', () => openModal('TIMER_LIST', true));
+document.getElementById('resultCloseBtn').addEventListener('click', () => { playPipSE(); AppState.screen = 'HOME'; AppState.resultType = null; AppState.game = null; render(); });
 
-// 20-3 / 26-5：勝敗共通。「終了」タップでホームへ戻し、ゲーム状態を破棄する
-document.getElementById('resultCloseBtn').addEventListener('click', () => {
-  AppState.screen = 'HOME';
-  AppState.resultType = null;
-  AppState.game = null;
-  render();
-});
-
-// 盤面／手札のカードクリック（イベント委譲：innerHTML再構築後も常に有効）
 document.getElementById('boardGrid').addEventListener('click', (e) => {
   const cell = e.target.closest('.card-cell');
-  if (!cell || cell.dataset.x === undefined) return;
-  onBoardCellClick(parseInt(cell.dataset.x, 10), parseInt(cell.dataset.y, 10));
+  if (cell && cell.dataset.x !== undefined) onBoardCellClick(parseInt(cell.dataset.x, 10), parseInt(cell.dataset.y, 10));
 });
 document.getElementById('handRow').addEventListener('click', (e) => {
   const cell = e.target.closest('.card-cell');
-  if (!cell || cell.dataset.handIndex === undefined) return;
-  onHandCardClick(parseInt(cell.dataset.handIndex, 10));
+  if (cell && cell.dataset.handIndex !== undefined) onHandCardClick(parseInt(cell.dataset.handIndex, 10));
 });
 document.getElementById('diceTray').addEventListener('click', (e) => {
   const die = e.target.closest('.die');
-  if (!die || die.dataset.dieId === undefined) return;
-  onTrayDieClick(parseInt(die.dataset.dieId, 10));
+  if (die && die.dataset.dieId !== undefined) onTrayDieClick(parseInt(die.dataset.dieId, 10));
 });
-
-// フェーズ切替ボタン：研究フェーズ→治療フェーズ（交換スキップ）／治療フェーズ→支払フェーズ
 document.getElementById('phaseBtn').addEventListener('click', () => {
-  const game = AppState.game;
-  if (!game) return;
-  if (game.phase === 'RESEARCH' && !game.researchExchangeDone) {
-    runMoveTreatPhase();
-  } else if (game.phase === 'MOVE_TREAT') {
+  if (AppState.game && AppState.game.phase === 'RESEARCH') {
+    playPipSE();
     runPaymentPhase();
   }
 });
-
-// バックドロップタップで閉じるのはルールモーダルのみ。
-// ダイスロール等の進行系モーダルは、意図した操作（ストップ/OK）でのみ閉じる。
 document.getElementById('modalOverlay').addEventListener('click', (e) => {
-  if (e.target.id === 'modalOverlay' && AppState.popup === 'RULES') closeModal();
+  if (e.target.id === 'modalOverlay' && (AppState.popup === 'RULES' || AppState.popup === 'GAME_MENU' || AppState.popup === 'DISCARD_LIST' || AppState.popup === 'TIMER_LIST')) closeModal(false);
 });
 
-/* ============================================================================
-   INIT
-============================================================================ */
 render();
 </script>
 </body>
